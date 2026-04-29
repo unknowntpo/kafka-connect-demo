@@ -75,6 +75,14 @@ For a more realistic dashboard, seed one hour of historical hot-sale traffic:
 
 By default this generates `14,400` events across the last hour, with denser traffic near the end of the window.
 
+For an AI-powered flash-sale coupon scenario, generate and score a profile-driven load:
+
+```bash
+./scripts/seed-ai-load-profile.sh
+```
+
+This uses [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) to generate `24,000` events over the last 80 minutes, then runs [scripts/score-load-profile.sh](scripts/score-load-profile.sh) against Elasticsearch. The design is documented in [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md).
+
 Inspect Kafka:
 
 ```bash
@@ -106,6 +114,11 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - `PURCHASE_SUCCEEDED`
 - `PURCHASE_FAILED`
 - `STOCK_CHANGED`
+- `COUPON_VIEWED`
+- `PAGE_REFRESHED`
+- `WAITING_ROOM_JOINED`
+- `COUPON_CLAIM_SUCCEEDED`
+- `COUPON_CLAIM_FAILED`
 
 Example event:
 

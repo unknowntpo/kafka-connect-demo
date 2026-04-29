@@ -1,0 +1,91 @@
+{
+  "scenario": "flash-sale-coupon",
+  "profile_version": "ai-profile-v1",
+  "campaign": "may-day-coupon-drop",
+  "total_events": 24000,
+  "duration_seconds": 4800,
+  "inventory": 1200,
+  "time_skew_power": 2.8,
+  "failure_event": "COUPON_CLAIM_FAILED",
+  "entity": {
+    "product_id": "sku_coupon_001",
+    "product_name": "May Day Limited Coupon",
+    "coupon_id": "coupon_mayday_001",
+    "coupon_name": "May Day 30% Off Coupon",
+    "discount_percent": 30
+  },
+  "phases": [
+    {
+      "name": "teaser",
+      "start": 0.0,
+      "end": 0.18,
+      "active_users": 5000,
+      "event_weights": {
+        "COUPON_VIEWED": 55,
+        "PAGE_REFRESHED": 30,
+        "WAITING_ROOM_JOINED": 10,
+        "COUPON_CLAIM_SUCCEEDED": 5
+      },
+      "failure_weights": {
+        "RATE_LIMITED": 70,
+        "PAYMENT_FAILED": 30
+      }
+    },
+    {
+      "name": "waiting-room",
+      "start": 0.18,
+      "end": 0.42,
+      "active_users": 12000,
+      "event_weights": {
+        "PAGE_REFRESHED": 50,
+        "WAITING_ROOM_JOINED": 25,
+        "COUPON_VIEWED": 15,
+        "COUPON_CLAIM_SUCCEEDED": 10
+      },
+      "failure_weights": {
+        "RATE_LIMITED": 80,
+        "PAYMENT_FAILED": 20
+      }
+    },
+    {
+      "name": "drop-open",
+      "start": 0.42,
+      "end": 0.7,
+      "active_users": 22000,
+      "event_weights": {
+        "PAGE_REFRESHED": 35,
+        "COUPON_CLAIM_SUCCEEDED": 28,
+        "WAITING_ROOM_JOINED": 20,
+        "COUPON_VIEWED": 12,
+        "COUPON_CLAIM_FAILED": 5
+      },
+      "failure_weights": {
+        "RATE_LIMITED": 70,
+        "PAYMENT_FAILED": 30
+      }
+    },
+    {
+      "name": "sold-out-pressure",
+      "start": 0.7,
+      "end": 1.0,
+      "active_users": 26000,
+      "event_weights": {
+        "PAGE_REFRESHED": 38,
+        "COUPON_CLAIM_FAILED": 32,
+        "WAITING_ROOM_JOINED": 20,
+        "COUPON_VIEWED": 10
+      },
+      "sold_out_event_weights": {
+        "PAGE_REFRESHED": 42,
+        "COUPON_CLAIM_FAILED": 38,
+        "WAITING_ROOM_JOINED": 15,
+        "COUPON_VIEWED": 5
+      },
+      "failure_weights": {
+        "COUPON_SOLD_OUT": 88,
+        "RATE_LIMITED": 10,
+        "PAYMENT_FAILED": 2
+      }
+    }
+  ]
+}

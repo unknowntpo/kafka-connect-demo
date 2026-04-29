@@ -107,8 +107,8 @@ create_purchase_outcome_table() {
   cat >"$body" <<'JSON'
 {
   "attributes": {
-    "title": "Hot Product - Purchase Outcomes",
-    "visState": "{\"title\":\"Hot Product - Purchase Outcomes\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"filters\",\"schema\":\"bucket\",\"params\":{\"filters\":[{\"input\":{\"query\":\"event_type: PURCHASE_SUCCEEDED\",\"language\":\"kuery\"},\"label\":\"Purchase succeeded\"},{\"input\":{\"query\":\"event_type: PURCHASE_FAILED\",\"language\":\"kuery\"},\"label\":\"Purchase failed\"},{\"input\":{\"query\":\"event_type: BUY_CLICKED\",\"language\":\"kuery\"},\"label\":\"Buy clicks\"}]}}]}",
+    "title": "Hot Product - Business Outcomes",
+    "visState": "{\"title\":\"Hot Product - Business Outcomes\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"filters\",\"schema\":\"bucket\",\"params\":{\"filters\":[{\"input\":{\"query\":\"event_type: (PURCHASE_SUCCEEDED or COUPON_CLAIM_SUCCEEDED)\",\"language\":\"kuery\"},\"label\":\"Succeeded\"},{\"input\":{\"query\":\"event_type: (PURCHASE_FAILED or COUPON_CLAIM_FAILED)\",\"language\":\"kuery\"},\"label\":\"Failed\"},{\"input\":{\"query\":\"event_type: (BUY_CLICKED or PAGE_REFRESHED)\",\"language\":\"kuery\"},\"label\":\"Demand pressure\"}]}}]}",
     "uiStateJSON": "{}",
     "description": "Business-level outcome table for the hot product funnel.",
     "version": 1,
