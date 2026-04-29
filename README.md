@@ -67,6 +67,14 @@ Generate hot product events:
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
+For a more realistic dashboard, seed one hour of historical hot-sale traffic:
+
+```bash
+./scripts/seed-dashboard-data.sh
+```
+
+By default this generates `14,400` events across the last hour, with denser traffic near the end of the window.
+
 Inspect Kafka:
 
 ```bash
@@ -156,7 +164,7 @@ The E2E test verifies:
 
 The dashboard setup script can be rerun safely; it overwrites the same saved object ids.
 
-The dashboard refresh interval is set to 30 seconds to avoid overloading a small local Elasticsearch container during demos.
+The dashboard default time range is 90 minutes and the refresh interval is 30 seconds to avoid overloading a small local Elasticsearch container during demos.
 
 ## Reset
 

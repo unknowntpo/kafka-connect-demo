@@ -145,6 +145,14 @@ For local demos, use a lower event rate if Kibana or Elasticsearch returns HTTP 
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
+For the dashboard story, seed a larger historical data set:
+
+```bash
+./scripts/seed-dashboard-data.sh
+```
+
+The default seed generates `14,400` events over the last hour. Timestamps are intentionally denser near the end of the window, so the dashboard shows a hot-product surge rather than a flat test-data line.
+
 Important options:
 
 - `--rate-per-second`
@@ -154,6 +162,7 @@ Important options:
 - `--no-seed`
 - `--malformed-ratio`
 - `--realtime`
+- `--flat-traffic`
 
 Seeded runs are used for E2E tests. Unseeded runs are useful for live demos.
 

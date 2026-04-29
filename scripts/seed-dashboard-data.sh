@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-broker:29092}"
+GRADLE_DOCKER_NETWORK="${GRADLE_DOCKER_NETWORK:-kafka-connect-demo_default}"
+RATE_PER_SECOND="${RATE_PER_SECOND:-4}"
+DURATION_SECONDS="${DURATION_SECONDS:-3600}"
+INITIAL_STOCK="${INITIAL_STOCK:-900}"
+SEED="${SEED:-20260429}"
+MALFORMED_RATIO="${MALFORMED_RATIO:-0}"
+RESET_INDEX="${RESET_INDEX:-1}"
+
+wait_for_index_count() {
+  local expected="$1"
+  local attempt
+  for attempt in $(seq 1 90); do
+    local count
+    count="$(curl -fsS http://localhost:9200/product-events/_count 2>/dev/null | jq -r '.count // 0' || true)"
+    if [[ "$count" =~ ^[0-9]+$ ]] && (( count >= expected )); then
+      echo "Indexed $count product events."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Timed out waiting for at least $expected indexed documents" >&2
+  return 1
+}
+
+cd "$ROOT_DIR"
+
+"$ROOT_DIR/scripts/create-topics.sh"
+
+if [[ "$RESET_INDEX" == "1" ]]; then
+  curl -fsS -X DELETE http://localhost:9200/product-events >/dev/null 2>&1 || true
+fi
+
+"$ROOT_DIR/scripts/create-search-resources.sh"
+"$ROOT_DIR/scripts/register-connectors.sh"
+"$ROOT_DIR/scripts/create-kibana-dashboard.sh"
+
+total_events=$((RATE_PER_SECOND * DURATION_SECONDS))
+echo "Generating $total_events hot-product events across the last $DURATION_SECONDS seconds..."
+
+GRADLE_DOCKER_NETWORK="$GRADLE_DOCKER_NETWORK" KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
+  "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=$RATE_PER_SECOND --duration-seconds=$DURATION_SECONDS --initial-stock=$INITIAL_STOCK --seed=$SEED --malformed-ratio=$MALFORMED_RATIO"
+
+wait_for_index_count "$total_events"
+
+curl -fsS "http://localhost:9200/product-events/_search?size=0" \
+  -H "Content-Type: application/json" \
+  -d '{"query":{"range":{"occurred_at":{"gte":"now-90m","lte":"now"}}},"aggs":{"types":{"terms":{"field":"event_type","size":10}}}}' \
+  | jq -r '.aggregations.types.buckets[] | "\(.key)=\(.doc_count)"'
+
+echo "Dashboard: http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard"

@@ -44,8 +44,9 @@ public final class HotProductEventGenerator {
         Random random = new Random(config.seed == null ? System.nanoTime() : config.seed);
         int totalEvents = Math.max(1, config.ratePerSecond * config.durationSeconds);
         int remainingStock = config.initialStock;
-        long baseMillis = System.currentTimeMillis();
-        long spacingMillis = Math.max(1L, (config.durationSeconds * 1000L) / totalEvents);
+        long nowMillis = System.currentTimeMillis();
+        long durationMillis = config.durationSeconds * 1000L;
+        long baseMillis = config.sleepBetweenEvents ? nowMillis : nowMillis - durationMillis;
 
         for (int i = 0; i < totalEvents; i++) {
             double progress = (double) i / (double) totalEvents;
@@ -54,7 +55,7 @@ public final class HotProductEventGenerator {
                 eventType = "PURCHASE_FAILED";
             }
 
-            Map<String, Object> event = buildEvent(eventType, i, remainingStock, baseMillis + (i * spacingMillis), random);
+            Map<String, Object> event = buildEvent(eventType, i, remainingStock, eventTimeMillis(baseMillis, durationMillis, progress, config), random);
             if ("PURCHASE_SUCCEEDED".equals(eventType)) {
                 remainingStock = Math.max(0, remainingStock - 1);
                 event.put("remaining_stock", remainingStock);
@@ -78,6 +79,16 @@ public final class HotProductEventGenerator {
                 Thread.sleep(Math.max(1L, 1000L / Math.max(1, config.ratePerSecond)));
             }
         }
+    }
+
+    private static long eventTimeMillis(long baseMillis, long durationMillis, double progress, Config config) {
+        if (config.sleepBetweenEvents || config.flatTraffic) {
+            return baseMillis + Math.round(durationMillis * progress);
+        }
+
+        // Compress more events toward the end of the window to mimic a product going viral.
+        double hotSaleProgress = 1.0d - Math.pow(1.0d - progress, 2.2d);
+        return baseMillis + Math.round(durationMillis * hotSaleProgress);
     }
 
     private static String chooseEventType(double progress, int remainingStock, Random random) {
@@ -203,6 +214,7 @@ public final class HotProductEventGenerator {
         private Double malformedRatio = 0.01;
         private Long seed = 42L;
         private boolean sleepBetweenEvents = false;
+        private boolean flatTraffic = false;
 
         private static Config parse(String[] args) {
             Config config = new Config();
@@ -228,6 +240,8 @@ public final class HotProductEventGenerator {
                     config.seed = null;
                 } else if ("--realtime".equals(arg)) {
                     config.sleepBetweenEvents = true;
+                } else if ("--flat-traffic".equals(arg)) {
+                    config.flatTraffic = true;
                 } else {
                     throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
