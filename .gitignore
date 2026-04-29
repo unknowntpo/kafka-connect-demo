@@ -1,4 +1,5 @@
 app/build/
 app/target/
+app/.gradle/
 .gradle-cache/
 .DS_Store
