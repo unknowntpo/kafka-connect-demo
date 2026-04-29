@@ -1,0 +1,28 @@
+{
+  "name": "elasticsearch-sink-product-events",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "tasks.max": "2",
+    "topics": "product.events",
+    "external.resource.usage": "INDEX",
+    "topic.to.external.resource.mapping": "product.events:product-events",
+    "connection.url": "http://elasticsearch:9200",
+    "type.name": "_doc",
+    "key.ignore": "false",
+    "schema.ignore": "true",
+    "behavior.on.null.values": "ignore",
+    "write.method": "upsert",
+    "max.in.flight.requests": "1",
+    "batch.size": "100",
+    "flush.timeout.ms": "30000",
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.name": "product.events.dlq",
+    "errors.deadletterqueue.context.headers.enable": "true",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true",
+    "transforms": "addPipeline",
+    "transforms.addPipeline.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.addPipeline.static.field": "pipeline",
+    "transforms.addPipeline.static.value": "connect-search-demo"
+  }
+}

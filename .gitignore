@@ -1,0 +1,4 @@
+app/build/
+app/target/
+.gradle-cache/
+.DS_Store

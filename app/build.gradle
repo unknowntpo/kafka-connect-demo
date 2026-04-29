@@ -1,0 +1,24 @@
+plugins {
+    id 'application'
+}
+
+group = 'demo.kafka.connect'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+application {
+    mainClass = 'demo.kafkaconnect.events.HotProductEventGenerator'
+}
+
+dependencies {
+    implementation 'org.apache.kafka:kafka-clients:3.7.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
+}
