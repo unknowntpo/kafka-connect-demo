@@ -11,7 +11,7 @@ if [[ -n "$GRADLE_DOCKER_NETWORK" ]]; then
 fi
 
 docker run --rm \
-  "${network_args[@]}" \
+  ${network_args[@]+"${network_args[@]}"} \
   -u "$(id -u):$(id -g)" \
   -e KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
   -e GRADLE_USER_HOME=/workspace/.gradle-cache \
