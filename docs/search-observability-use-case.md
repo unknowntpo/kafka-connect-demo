@@ -139,6 +139,12 @@ CLI shape:
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=30 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
+For local demos, use a lower event rate if Kibana or Elasticsearch returns HTTP 429:
+
+```bash
+./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
+```
+
 Important options:
 
 - `--rate-per-second`

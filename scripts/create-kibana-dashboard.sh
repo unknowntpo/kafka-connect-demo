@@ -201,7 +201,7 @@ create_dashboard() {
     "timeTo": "now",
     "refreshInterval": {
       "pause": false,
-      "value": 5000
+      "value": 30000
     },
     "version": 1,
     "kibanaSavedObjectMeta": {

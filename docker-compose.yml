@@ -18,6 +18,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 10s
@@ -31,7 +32,7 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: "-Xms768m -Xmx768m"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null"]
       interval: 10s
@@ -66,6 +67,7 @@ services:
     environment:
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       CONNECT_REST_PORT: 8083
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx768m"
     volumes:
       - ./docker/connect/connect-distributed.properties:/etc/kafka-connect/connect-distributed.properties:ro
     command: ["connect-distributed", "/etc/kafka-connect/connect-distributed.properties"]

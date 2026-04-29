@@ -13,7 +13,7 @@
     "behavior.on.null.values": "ignore",
     "write.method": "upsert",
     "max.in.flight.requests": "1",
-    "batch.size": "100",
+    "batch.size": "25",
     "flush.timeout.ms": "30000",
     "errors.tolerance": "all",
     "errors.deadletterqueue.topic.name": "product.events.dlq",

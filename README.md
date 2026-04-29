@@ -64,7 +64,7 @@ Chapter 4 concepts:
 Generate hot product events:
 
 ```bash
-./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=30 --duration-seconds=20 --initial-stock=80 --seed=42"
+./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
 Inspect Kafka:
@@ -155,6 +155,8 @@ The E2E test verifies:
 - internal topic creation
 
 The dashboard setup script can be rerun safely; it overwrites the same saved object ids.
+
+The dashboard refresh interval is set to 30 seconds to avoid overloading a small local Elasticsearch container during demos.
 
 ## Reset
 
