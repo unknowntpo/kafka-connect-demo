@@ -15,7 +15,7 @@ Designing Effective Data Pipelines
 
 # Opening Story
 
-想像今天晚上 8 點有一張限量折價券開搶。
+想像今天晚上 8 點有一批限量折價券開搶。
 
 ```text
 很多人打開網頁
@@ -49,7 +49,7 @@ Elasticsearch
 Kibana Dashboard
 ```
 
-Kafka Connect 的角色：把 Kafka 裡的資料可靠地搬到外部系統。
+Kafka Connect 的角色：依照 connector 設定，把 Kafka 裡的資料持續送到外部系統。
 
 ---
 
@@ -64,10 +64,10 @@ Kafka Connect 的角色：把 Kafka 裡的資料可靠地搬到外部系統。
 而是問：
 
 ```text
-這條 pipeline 設計得好不好？
-壞掉時看不看得出來？
-資料量變大時撐不撐得住？
-資料格式改變時會不會爆炸？
+這條 pipeline 是否容易維護？
+發生故障時是否能觀察與定位？
+資料量變大時是否能擴展？
+資料格式改變時是否有明確的演進策略？
 ```
 
 ---
@@ -85,7 +85,7 @@ Kafka Connect Chapter 4 is about designing pipelines that are:
 中文講法：
 
 ```text
-不是只把資料搬過去，而是要搬得穩、搬得清楚、出事能查。
+不是只把資料搬過去，而是要讓資料流動過程可觀察、可維護、可恢復。
 ```
 
 ---
@@ -104,13 +104,13 @@ DLQ = 問題包裹暫存區
 External system = 收貨地點
 ```
 
-第四章就是在教我們怎麼設計這間物流公司。
+第四章可理解為：如何設計這套資料物流系統，使它在資料量、故障與格式變更下仍可運作。
 
 ---
 
 # Design Question 1
 
-## 你要選哪一台貨車？
+## 要選哪一條資料路線？
 
 也就是：Choosing a Connector
 
@@ -149,7 +149,7 @@ Kafka -> Elasticsearch / Kibana
 - Kibana 可以做 dashboard
 - Elasticsearch 適合查詢事件
 - 適合 log indexing、監控、稽核、事件搜尋
-- 很容易讓初學者看到「資料真的過去了」
+- 初學者可以直接確認資料已經寫入目標系統
 
 這比把資料寫到某個看不見的系統更適合 demo。
 
@@ -161,7 +161,7 @@ Kafka -> Elasticsearch / Kibana
 
 也就是：Defining Data Models
 
-資料模型不是小事。
+資料模型會直接影響查詢、擴展與除錯。
 
 如果 dashboard 要回答「折價券是不是被搶爆了」，事件就應該有：
 
@@ -176,7 +176,7 @@ Kafka -> Elasticsearch / Kibana
 
 # Bad Event Example
 
-這種資料很難做 dashboard：
+這種資料不利於建立 dashboard：
 
 ```json
 {
@@ -207,7 +207,7 @@ Kafka -> Elasticsearch / Kibana
 }
 ```
 
-這樣 dashboard 才能回答：
+這樣 dashboard 才能回答具體問題：
 
 - 什麼事件最多？
 - 什麼時候爆量？
@@ -240,7 +240,7 @@ Kafka Connect SMT 適合：
 - 刪欄位
 - 簡單 route
 
-不適合：
+不適合承擔：
 
 - 跨事件統計
 - join
@@ -257,12 +257,12 @@ Kafka Connect SMT 適合：
 
 # Why This Matters
 
-如果把太多商業邏輯塞進 Kafka Connect：
+如果把太多商業邏輯放進 Kafka Connect：
 
-- pipeline 很難測
-- connector config 變成隱藏程式碼
-- 故障時很難知道誰錯
-- 未來換 connector 會很痛
+- pipeline 難以測試
+- connector config 會變成難以測試的隱藏邏輯
+- 故障時難以判斷責任邊界
+- 未來更換 connector 或調整 pipeline 會增加維護成本
 
 實務原則：
 
@@ -275,7 +275,7 @@ Kafka Streams / Flink / Spark 處理複雜邏輯。
 
 # Design Question 4
 
-## 要開幾個工人？
+## 要設定多少個 task？
 
 也就是：Tasks and Partitions
 
@@ -331,7 +331,7 @@ Chapter 4 把責任拆成三層：
 
 ```text
 Connector
-    定義外部系統資料怎麼變成 ConnectRecord
+    定義 Kafka Connect 如何和外部系統互動
 
 Converter
     Kafka bytes <-> ConnectRecord
@@ -362,7 +362,7 @@ ConnectRecord
 Elasticsearch document
 ```
 
-這就是 Chapter 4 的 data format 概念。
+這對應 Chapter 4 的 data format 責任分工：converter 處理 bytes 與 `ConnectRecord` 的轉換，SMT 修改 `ConnectRecord`，sink connector 將資料寫入目標系統。
 
 ---
 
@@ -395,10 +395,10 @@ Schema 的作用：
 - Kibana 可以直接看到欄位
 - 重點放在 Kafka Connect pipeline design
 
-但要誠實說：
+限制在於：
 
 ```text
-正式 production pipeline 通常應該認真考慮 schema registry。
+正式 production pipeline 通常應納入 schema registry 與相容性規則。
 ```
 
 ---
@@ -433,7 +433,7 @@ connect-offsets-hot-product-demo
 connect-status-hot-product-demo
 ```
 
-這代表 Kafka Connect 不是只靠本機記憶體。
+這代表 Kafka Connect distributed mode 不只依賴單一 worker 的本機狀態。
 
 它把重要狀態放進 Kafka。
 
@@ -453,22 +453,22 @@ connect-status-hot-product-demo
 
 這是一筆壞掉的 JSON。
 
-問題：
+設計問題：
 
 ```text
-整條 pipeline 要停掉嗎？
-還是先把壞資料放到旁邊？
+整條 pipeline 是否要停止？
+或是先保存壞資料，讓主流程繼續處理？
 ```
 
 ---
 
 # Dead Letter Queue
 
-DLQ 是問題包裹暫存區。
+DLQ 是 sink pipeline 的問題資料暫存區。
 
 ```text
-正常資料 -> Elasticsearch
-壞資料   -> product.events.dlq
+可處理資料 -> Elasticsearch
+無法處理資料 -> product.events.dlq
 ```
 
 我們 demo 設定：
@@ -485,22 +485,22 @@ errors.deadletterqueue.topic.name=product.events.dlq
 沒有 DLQ：
 
 ```text
-一筆壞資料可能讓 task fail
+一筆壞資料可能讓 task 進入 FAILED 狀態
 ```
 
 有 DLQ：
 
 ```text
-主流程繼續跑
-壞資料被保存
-之後可以人工或程式補處理
+主流程可以繼續處理其他 records
+壞資料被保存到 DLQ topic
+後續可由人工或另一個 consumer / connector 補處理
 ```
 
 代價：
 
 ```text
-你不能假裝資料沒有問題。
-DLQ 也需要監控。
+DLQ 不代表資料問題消失。
+DLQ topic 仍需要監控與補償流程。
 ```
 
 ---
@@ -515,20 +515,20 @@ Chapter 4 提到三種語意：
 - at-least-once
 - exactly-once
 
-最重要的是：
+報告時需要避免過度承諾：
 
 ```text
-不要亂講 exactly-once。
+不要把所有 pipeline 都描述成 exactly-once。
 ```
 
 ---
 
 # Our Demo Semantics
 
-我們 demo 的說法：
+這個 demo 的精確說法：
 
 ```text
-Elasticsearch sink is at-least-once.
+Elasticsearch sink 以 at-least-once 方式理解。
 ```
 
 可能發生：
@@ -545,7 +545,7 @@ Elasticsearch document id = key
 write.method = upsert
 ```
 
-這叫 practical idempotency，不是真正的 universal exactly-once。
+這是 practical idempotency：透過穩定 document id 降低重送造成的重複寫入影響，但不等同於跨系統通用的 exactly-once。
 
 ---
 
@@ -573,7 +573,7 @@ write.method = upsert
 
 為了讓 dashboard 更像真實世界，我們做了 profile-driven load generator。
 
-AI 不負責一筆一筆生 event。
+AI 不負責逐筆產生 event。
 
 AI 負責生成「流量劇本」：
 
@@ -581,7 +581,7 @@ AI 負責生成「流量劇本」：
 teaser -> waiting-room -> drop-open -> sold-out-pressure
 ```
 
-Java generator 負責照劇本穩定執行。
+Java generator 負責依照 profile 穩定、可重跑地產生事件。
 
 ---
 
@@ -602,14 +602,14 @@ sold-out failures spike later
 
 # Feedback Loop
 
-我們不是靠肉眼說「看起來很真」。
+我們不只依賴目測判斷資料是否合理。
 
 `score-load-profile.sh` 會查 Elasticsearch：
 
 - 總資料量是否足夠
 - 後段流量是否明顯高於前段
 - refresh / waiting room 是否存在
-- coupon 是否真的售罄
+- coupon inventory 是否已經歸零
 - sold-out failure 是否主導後段
 - user 分布是否合理
 - SMT 欄位是否存在
@@ -618,7 +618,7 @@ sold-out failures spike later
 
 # What Students Should Remember
 
-Kafka Connect 不是魔法。
+Kafka Connect 不是無條件保證正確性的黑盒。
 
 它是一套標準化資料搬運框架。
 
