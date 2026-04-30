@@ -3,7 +3,14 @@ set -euo pipefail
 
 ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:9200}"
 SCENARIO="${SCENARIO:-flash-sale-coupon}"
-WINDOW="${WINDOW:-now-90m}"
+WINDOW_FROM="${WINDOW_FROM:-now-90m}"
+WINDOW_TO="${WINDOW_TO:-now}"
+FIRST_FROM="${FIRST_FROM:-now-90m}"
+FIRST_TO="${FIRST_TO:-now-60m}"
+MIDDLE_FROM="${MIDDLE_FROM:-now-60m}"
+MIDDLE_TO="${MIDDLE_TO:-now-30m}"
+LAST_FROM="${LAST_FROM:-now-30m}"
+LAST_TO="${LAST_TO:-now}"
 
 query_file="$(mktemp)"
 response_file="$(mktemp)"
@@ -17,7 +24,7 @@ cat >"$query_file" <<JSON
     "bool": {
       "filter": [
         { "term": { "scenario": "$SCENARIO" } },
-        { "range": { "occurred_at": { "gte": "$WINDOW", "lte": "now" } } }
+        { "range": { "occurred_at": { "gte": "$WINDOW_FROM", "lte": "$WINDOW_TO" } } }
       ]
     }
   },
@@ -29,13 +36,15 @@ cat >"$query_file" <<JSON
     "top_users": { "terms": { "field": "user_id", "size": 1 } },
     "min_inventory": { "min": { "field": "remaining_coupons" } },
     "pipeline_docs": { "filter": { "term": { "pipeline": "connect-search-demo" } } },
+    "region_docs": { "filter": { "exists": { "field": "metadata_region" } } },
+    "regions": { "terms": { "field": "metadata_region", "size": 10 } },
     "time_ranges": {
       "date_range": {
         "field": "occurred_at",
         "ranges": [
-          { "key": "first_30m", "from": "now-90m", "to": "now-60m" },
-          { "key": "middle_30m", "from": "now-60m", "to": "now-30m" },
-          { "key": "last_30m", "from": "now-30m", "to": "now" }
+          { "key": "first_30m", "from": "$FIRST_FROM", "to": "$FIRST_TO" },
+          { "key": "middle_30m", "from": "$MIDDLE_FROM", "to": "$MIDDLE_TO" },
+          { "key": "last_30m", "from": "$LAST_FROM", "to": "$LAST_TO" }
         ]
       }
     }
@@ -69,6 +78,7 @@ jq --arg scenario "$SCENARIO" '
   | ((.aggregations.top_users.buckets[0].doc_count // 0) / (if $total == 0 then 1 else $total end)) as $top_user_share
   | (.aggregations.min_inventory.value // 999999) as $min_inventory
   | (.aggregations.pipeline_docs.doc_count // 0) as $pipeline_docs
+  | (.aggregations.region_docs.doc_count // 0) as $region_docs
   | {
       score: (
         score($total >= 20000; 20)
@@ -77,7 +87,7 @@ jq --arg scenario "$SCENARIO" '
         + score($successes >= 1000 and $min_inventory == 0; 20)
         + score($failures > $successes and $sold_out > ($failures * 0.6); 15)
         + score($unique_users >= 8000 and $top_user_share < 0.01; 5)
-        + score($pipeline_docs == $total; 5)
+        + score($pipeline_docs == $total and $region_docs == $total; 5)
       ),
       scenario: $scenario,
       total_events: $total,
@@ -96,6 +106,8 @@ jq --arg scenario "$SCENARIO" '
       unique_users: $unique_users,
       top_user_share: (($top_user_share * 10000 | round) / 10000),
       pipeline_docs: $pipeline_docs,
+      region_docs: $region_docs,
+      regions: (.aggregations.regions.buckets | map({key, count: .doc_count})),
       verdict: (if (
         $total >= 20000
         and (($last / (if $first == 0 then 1 else $first end)) >= 2)
@@ -104,6 +116,7 @@ jq --arg scenario "$SCENARIO" '
         and $failures > $successes
         and $sold_out > ($failures * 0.6)
         and $pipeline_docs == $total
+        and $region_docs == $total
       ) then "pass" else "needs_adjustment" end)
     }
 ' "$response_file"

@@ -96,6 +96,12 @@ if (( pipeline_docs < 100 )); then
   exit 1
 fi
 
+region_docs="$(curl -fsS "http://localhost:9200/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"exists":{"field":"metadata_region"}}}' | jq -r '.hits.total.value')"
+if (( region_docs < 100 )); then
+  echo "Expected SMT-flattened metadata_region in indexed documents" >&2
+  exit 1
+fi
+
 dlq_offsets="$(docker compose exec -T broker kafka-run-class kafka.tools.GetOffsetShell --broker-list broker:29092 --topic product.events.dlq 2>/dev/null | awk -F ':' '{sum += $3} END {print sum + 0}')"
 if (( dlq_offsets < 1 )); then
   echo "Expected malformed records to be written to product.events.dlq" >&2

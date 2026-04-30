@@ -79,7 +79,7 @@ The scorer checks:
 - Coupon claims succeed until inventory reaches zero.
 - Sold-out failures dominate after inventory depletion.
 - User distribution is broad enough.
-- Kafka Connect SMT field `pipeline=connect-search-demo` exists on every indexed document.
+- Kafka Connect SMT fields exist on every indexed document: `pipeline=connect-search-demo` for provenance and `metadata_region` for dashboard grouping.
 
 To generate and score the current profile:
 
@@ -87,7 +87,7 @@ To generate and score the current profile:
 ./scripts/seed-ai-load-profile.sh
 ```
 
-The script resets the Elasticsearch index by default, recreates mappings, registers the connector, creates the Kibana dashboard, generates profile events through Kafka, waits for indexing, and prints the score. The included flash-sale profile generates 80 minutes of history so the full data set stays inside the dashboard's default 90-minute window.
+The script cleans demo state by default, recreates mappings, registers the connector, creates the Kibana dashboard, generates profile events through Kafka, waits for indexing, and prints the score. Cleanup removes the connector, Kafka data topics, Kafka Connect internal topics, and the Elasticsearch index. The included flash-sale profile generates 80 minutes of history against a deterministic default base time, `2026-05-01T12:00:00Z`, so repeated runs produce the same aggregate results.
 
 ## Extension Path
 

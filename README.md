@@ -29,7 +29,7 @@ Chapter 3 concepts:
 - connector lifecycle through REST
 - connector and task status
 - sink-side converter flow
-- SMT with `InsertField`
+- SMT with `Flatten` and `InsertField`
 - DLQ for malformed records
 - Connect internal topics
 
@@ -82,6 +82,8 @@ For an AI-powered flash-sale coupon scenario, generate and score a profile-drive
 ```
 
 This uses [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) to generate `24,000` events over the last 80 minutes, then runs [scripts/score-load-profile.sh](scripts/score-load-profile.sh) against Elasticsearch. The design is documented in [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md).
+
+The seed scripts are isolated by default. Before generating data, they remove the connector, Kafka data topics, Kafka Connect internal topics, and the Elasticsearch index so repeated runs do not inherit previous state. They also use a deterministic default base time, `2026-05-01T12:00:00Z`, so repeated runs produce the same dashboard time window and aggregate results.
 
 Inspect Kafka:
 
@@ -152,6 +154,7 @@ The included Kibana dashboard shows:
 - Purchase outcomes: buy clicks, succeeded purchases, failed purchases
 - Failure reasons, especially `OUT_OF_STOCK`
 - Top active generated users
+- Traffic by region using `metadata_region`, produced by the `Flatten` SMT
 
 ## E2E Verification
 
@@ -171,16 +174,23 @@ The E2E test verifies:
 - event generation into Kafka
 - documents indexed into Elasticsearch
 - SMT field `pipeline=connect-search-demo`
+- SMT-flattened field `metadata_region`
 - malformed records routed to `product.events.dlq`
 - Connect restart and continued indexing
 - internal topic creation
 
 The dashboard setup script can be rerun safely; it overwrites the same saved object ids.
 
-The dashboard default time range is 90 minutes and the refresh interval is 30 seconds to avoid overloading a small local Elasticsearch container during demos.
+The dashboard default time range is 90 minutes and the refresh interval is 30 seconds to avoid overloading a small local Elasticsearch container during demos. The seed scripts override the dashboard time range to match their deterministic generated event window.
 
 ## Reset
 
 ```bash
 ./scripts/reset.sh
+```
+
+For a clean rerun while the stack is already running:
+
+```bash
+./scripts/clean-demo-state.sh
 ```

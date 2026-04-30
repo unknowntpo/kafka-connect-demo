@@ -247,11 +247,18 @@ Kafka Connect SMT 適合：
 - 複雜規則引擎
 - 機器學習推論
 
-我們 demo 的 SMT 只做一件事：
+我們 demo 的 SMT 做兩件 record-local 的事：
 
 ```text
-加上 pipeline=connect-search-demo
+Flatten:
+  metadata.region -> metadata_region
+  metadata.campaign -> metadata_campaign
+
+InsertField:
+  pipeline=connect-search-demo
 ```
+
+商業意義：Kibana 可以直接用 `metadata_region` 比較不同地區的搶券壓力與失敗原因。
 
 ---
 
@@ -353,7 +360,7 @@ Kafka bytes
     v
 ConnectRecord
     |
-    | SMT: InsertField
+    | SMT: Flatten + InsertField
     v
 ConnectRecord
     |
@@ -612,7 +619,7 @@ sold-out failures spike later
 - coupon inventory 是否已經歸零
 - sold-out failure 是否主導後段
 - user 分布是否合理
-- SMT 欄位是否存在
+- SMT 產生的 `metadata_region` 與 `pipeline` 欄位是否存在
 
 ---
 
@@ -665,6 +672,8 @@ Demo:
 ```bash
 ./scripts/seed-ai-load-profile.sh
 ```
+
+這個腳本會先清除 connector、topics、Connect internal topics 與 Elasticsearch index，並使用固定 base time 重新產生資料，因此每次 demo 的統計結果一致。
 
 Dashboard:
 

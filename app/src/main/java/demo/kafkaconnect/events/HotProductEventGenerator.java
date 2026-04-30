@@ -54,7 +54,8 @@ public final class HotProductEventGenerator {
         int durationSeconds = intValue(profile, "duration_seconds", config.durationSeconds);
         int inventory = intValue(profile, "inventory", config.initialStock);
         long durationMillis = durationSeconds * 1000L;
-        long baseMillis = System.currentTimeMillis() - durationMillis;
+        long profileEndMillis = config.baseTime == null ? System.currentTimeMillis() : Instant.parse(config.baseTime).toEpochMilli();
+        long baseMillis = profileEndMillis - durationMillis;
         double timeSkewPower = doubleValue(profile, "time_skew_power", 2.0d);
         int remainingInventory = inventory;
 
@@ -255,7 +256,7 @@ public final class HotProductEventGenerator {
         Random random = new Random(config.seed == null ? System.nanoTime() : config.seed);
         int totalEvents = Math.max(1, config.ratePerSecond * config.durationSeconds);
         int remainingStock = config.initialStock;
-        long nowMillis = System.currentTimeMillis();
+        long nowMillis = config.baseTime == null ? System.currentTimeMillis() : Instant.parse(config.baseTime).toEpochMilli();
         long durationMillis = config.durationSeconds * 1000L;
         long baseMillis = config.sleepBetweenEvents ? nowMillis : nowMillis - durationMillis;
 
@@ -427,6 +428,7 @@ public final class HotProductEventGenerator {
         private boolean sleepBetweenEvents = false;
         private boolean flatTraffic = false;
         private String profilePath = null;
+        private String baseTime = null;
 
         private static Config parse(String[] args) {
             Config config = new Config();
@@ -448,6 +450,8 @@ public final class HotProductEventGenerator {
                     config.malformedRatio = Double.parseDouble(arg.substring("--malformed-ratio=".length()));
                 } else if (arg.startsWith("--profile=")) {
                     config.profilePath = arg.substring("--profile=".length());
+                } else if (arg.startsWith("--base-time=")) {
+                    config.baseTime = arg.substring("--base-time=".length());
                 } else if (arg.startsWith("--seed=")) {
                     config.seed = Long.parseLong(arg.substring("--seed=".length()));
                 } else if ("--no-seed".equals(arg)) {

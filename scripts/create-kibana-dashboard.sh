@@ -4,6 +4,8 @@ set -euo pipefail
 KIBANA_URL="${KIBANA_URL:-http://localhost:5601}"
 INDEX_PATTERN_ID="product-events-data-view"
 DASHBOARD_ID="hot-product-sales-dashboard"
+DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-now-90m}"
+DASHBOARD_TIME_TO="${DASHBOARD_TIME_TO:-now}"
 
 wait_for_kibana() {
   local attempt
@@ -185,20 +187,48 @@ JSON
   rm -f "$body"
 }
 
-create_dashboard() {
+create_region_table() {
   local body
   body="$(mktemp)"
   cat >"$body" <<'JSON'
+{
+  "attributes": {
+    "title": "Hot Product - Traffic by Region",
+    "visState": "{\"title\":\"Hot Product - Traffic by Region\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"metadata_region\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":10,\"otherBucket\":false,\"missingBucket\":false}}]}",
+    "uiStateJSON": "{}",
+    "description": "Regional traffic split produced by the Kafka Connect Flatten SMT.",
+    "version": 1,
+    "kibanaSavedObjectMeta": {
+      "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+    }
+  },
+  "references": [
+    {
+      "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
+      "type": "index-pattern",
+      "id": "product-events-data-view"
+    }
+  ]
+}
+JSON
+  put_saved_object "visualization" "hot-product-traffic-by-region" "$body"
+  rm -f "$body"
+}
+
+create_dashboard() {
+  local body
+  body="$(mktemp)"
+  cat >"$body" <<JSON
 {
   "attributes": {
     "title": "Hot Product Sales Observability",
     "description": "Kafka Connect demo dashboard: one hot product is receiving traffic, purchases, failures, and stock pressure.",
     "hits": 0,
     "optionsJSON": "{\"useMargins\":true,\"syncColors\":false,\"hidePanelTitles\":false}",
-    "panelsJSON": "[{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":0,\"w\":12,\"h\":8,\"i\":\"1\"},\"panelIndex\":\"1\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":12,\"y\":0,\"w\":36,\"h\":16,\"i\":\"2\"},\"panelIndex\":\"2\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":8,\"w\":12,\"h\":16,\"i\":\"3\"},\"panelIndex\":\"3\",\"embeddableConfig\":{},\"panelRefName\":\"panel_3\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":24,\"w\":24,\"h\":14,\"i\":\"4\"},\"panelIndex\":\"4\",\"embeddableConfig\":{},\"panelRefName\":\"panel_4\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":24,\"y\":24,\"w\":24,\"h\":14,\"i\":\"5\"},\"panelIndex\":\"5\",\"embeddableConfig\":{},\"panelRefName\":\"panel_5\"}]",
+    "panelsJSON": "[{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":0,\"w\":12,\"h\":8,\"i\":\"1\"},\"panelIndex\":\"1\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":12,\"y\":0,\"w\":36,\"h\":16,\"i\":\"2\"},\"panelIndex\":\"2\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":8,\"w\":12,\"h\":16,\"i\":\"3\"},\"panelIndex\":\"3\",\"embeddableConfig\":{},\"panelRefName\":\"panel_3\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":24,\"w\":24,\"h\":14,\"i\":\"4\"},\"panelIndex\":\"4\",\"embeddableConfig\":{},\"panelRefName\":\"panel_4\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":24,\"y\":24,\"w\":24,\"h\":14,\"i\":\"5\"},\"panelIndex\":\"5\",\"embeddableConfig\":{},\"panelRefName\":\"panel_5\"},{\"version\":\"7.17.23\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":38,\"w\":24,\"h\":12,\"i\":\"6\"},\"panelIndex\":\"6\",\"embeddableConfig\":{},\"panelRefName\":\"panel_6\"}]",
     "timeRestore": true,
-    "timeFrom": "now-90m",
-    "timeTo": "now",
+    "timeFrom": "$DASHBOARD_TIME_FROM",
+    "timeTo": "$DASHBOARD_TIME_TO",
     "refreshInterval": {
       "pause": false,
       "value": 30000
@@ -233,6 +263,11 @@ create_dashboard() {
       "name": "panel_5",
       "type": "visualization",
       "id": "hot-product-active-users"
+    },
+    {
+      "name": "panel_6",
+      "type": "visualization",
+      "id": "hot-product-traffic-by-region"
     }
   ]
 }
@@ -248,6 +283,7 @@ create_event_volume_line
 create_purchase_outcome_table
 create_failure_reason_table
 create_active_users_table
+create_region_table
 create_dashboard
 
 echo "Created Kibana dashboard: $KIBANA_URL/app/dashboards#/view/$DASHBOARD_ID"

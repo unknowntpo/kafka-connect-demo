@@ -176,7 +176,7 @@ This demo shows Kafka Connect's pipeline components:
 - `Connector`: Elasticsearch sink connector.
 - `Task`: sink task consumes Kafka partitions.
 - `Converter`: `JsonConverter` converts Kafka bytes into `ConnectRecord`.
-- `SMT`: `InsertField` adds `pipeline=connect-search-demo`.
+- `SMT`: `Flatten` promotes nested metadata such as `metadata.region` into dashboard-friendly fields such as `metadata_region`; `InsertField` adds `pipeline=connect-search-demo`.
 - `DLQ`: malformed JSON records are routed to `product.events.dlq`.
 
 Sink-side flow:
@@ -205,7 +205,7 @@ This demo also shows pipeline design decisions:
 - The event schema is intentionally small and dashboard-driven.
 - `product.events` uses 3 partitions so sink task parallelism can be discussed.
 - `tasks.max=2` shows that task count is bounded by partitions and connector behavior.
-- SMT is used only for light metadata, not business logic.
+- SMT is used for light, record-local reshaping: flattening metadata for dashboard grouping and adding pipeline provenance. It is not used for business logic.
 - Malformed records go to DLQ.
 - Elasticsearch writes are treated as at-least-once.
 - Kafka record key is `event_id`, letting the sink use stable document ids for practical idempotency.
@@ -222,6 +222,26 @@ The implementation is complete when `./scripts/e2e.sh` verifies:
 - Elasticsearch receives indexed documents.
 - Kibana can use the `product-events` data view.
 - Kibana dashboard saved objects can be created for the demo metrics.
-- SMT field `pipeline=connect-search-demo` appears in indexed documents.
+- SMT field `pipeline=connect-search-demo` and SMT-flattened field `metadata_region` appear in indexed documents.
 - Malformed records are written to DLQ.
 - Connect can restart and continue indexing new events.
+
+## Rerun Isolation
+
+Demo seed scripts call `./scripts/clean-demo-state.sh` by default. The cleanup removes:
+
+- the sink connector
+- `product.events`
+- `product.events.dlq`
+- Kafka Connect internal topics
+- the Elasticsearch `product-events` index
+
+This keeps repeated demo runs deterministic instead of mixing new events with previous connector offsets, topic contents, or indexed documents.
+
+The seed scripts also use deterministic event time by default:
+
+```text
+BASE_TIME=2026-05-01T12:00:00Z
+```
+
+The Kibana dashboard time range is set to the generated data window during seeding, so reruns show the same event counts, trend buckets, and region/failure distributions.

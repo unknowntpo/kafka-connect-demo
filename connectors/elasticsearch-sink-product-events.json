@@ -20,7 +20,9 @@
     "errors.deadletterqueue.context.headers.enable": "true",
     "errors.log.enable": "true",
     "errors.log.include.messages": "true",
-    "transforms": "addPipeline",
+    "transforms": "flattenMetadata,addPipeline",
+    "transforms.flattenMetadata.type": "org.apache.kafka.connect.transforms.Flatten$Value",
+    "transforms.flattenMetadata.delimiter": "_",
     "transforms.addPipeline.type": "org.apache.kafka.connect.transforms.InsertField$Value",
     "transforms.addPipeline.static.field": "pipeline",
     "transforms.addPipeline.static.value": "connect-search-demo"
