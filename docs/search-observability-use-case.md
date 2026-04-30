@@ -1,19 +1,21 @@
-# Hot Product Search / Observability Demo Design
+# 熱門商品搜尋與觀測 Demo 設計
 
-## Summary
+## 摘要
 
-This Kafka Connect demo uses a single hot-selling product to make the dashboard story obvious to any audience.
+這個 Kafka Connect demo 使用「單一熱門商品」與「限量折價券」兩種容易理解的情境，讓學生可以直接看懂資料管線的目的。
 
-The user-facing question is simple:
+核心問題是：
 
 ```text
-Is this product becoming hot, is stock running out, and why are purchases failing?
+這個商品是否正在變熱門？
+庫存或折價券是否即將售罄？
+購買或領券失敗的原因是什麼？
 ```
 
-Architecture:
+架構：
 
 ```text
-Java Hot Product Event Generator
+Java 事件產生器
         |
         | JSON events
         v
@@ -28,42 +30,43 @@ Elasticsearch index: product-events
 Kibana
 ```
 
-Kafka Connect is responsible for moving events from Kafka into Elasticsearch. The Java app only simulates realistic product activity.
+Kafka Connect 負責把 Kafka 裡的事件送到 Elasticsearch。Java application 只負責模擬使用者行為與商業事件。
 
-## Dashboard Story
+## Dashboard 故事
 
-The dashboard should show these trends:
+Dashboard 應該呈現下列趨勢：
 
-- Product views per minute are increasing.
-- Buy clicks increase after the product becomes hot.
-- Successful purchases increase while stock is available.
-- Remaining stock decreases over time.
-- Failed purchases increase after the product sells out.
-- Failure reasons show whether users hit `OUT_OF_STOCK`, `PAYMENT_FAILED`, or `RATE_LIMITED`.
+- 商品瀏覽量逐步上升。
+- 商品變熱後，購買點擊增加。
+- 庫存存在時，成功購買或成功領券增加。
+- 庫存或折價券數量逐步下降。
+- 售罄後，失敗事件增加。
+- failure reasons 顯示使用者遇到的是 `OUT_OF_STOCK`、`COUPON_SOLD_OUT`、`PAYMENT_FAILED` 或 `RATE_LIMITED`。
 
-Implemented Kibana panels:
+已實作的 Kibana panels：
 
-- Metric: total indexed product events.
-- Line chart: event volume over time, split by `event_type`.
-- Table: `BUY_CLICKED`, `PURCHASE_SUCCEEDED`, and `PURCHASE_FAILED` counts.
-- Table: `failure_reason`, highlighting `OUT_OF_STOCK`.
-- Table: top generated `user_id` values by event count.
+- Metric：已索引事件總數。
+- Line chart：依 `event_type` 切分的事件量趨勢。
+- Table：business outcomes，例如點擊、成功、失敗。
+- Table：`failure_reason`，用來觀察售罄或限流。
+- Table：依 `user_id` 統計的活躍使用者。
+- Table：依 `metadata_region` 統計的地區流量。`metadata_region` 由 Kafka Connect `Flatten` SMT 從巢狀 `metadata.region` 展平而來。
 
-The dashboard is created by:
+建立 dashboard：
 
 ```bash
 ./scripts/create-kibana-dashboard.sh
 ```
 
-Dashboard URL:
+Dashboard URL：
 
 ```text
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
-## Event Model
+## 事件模型
 
-Event types:
+熱門商品事件類型：
 
 ```text
 PRODUCT_VIEWED
@@ -73,7 +76,17 @@ PURCHASE_FAILED
 STOCK_CHANGED
 ```
 
-Common fields:
+限量折價券事件類型：
+
+```text
+COUPON_VIEWED
+PAGE_REFRESHED
+WAITING_ROOM_JOINED
+COUPON_CLAIM_SUCCEEDED
+COUPON_CLAIM_FAILED
+```
+
+共同欄位範例：
 
 ```json
 {
@@ -95,7 +108,7 @@ Common fields:
 }
 ```
 
-Purchase success adds:
+購買成功會增加：
 
 ```json
 {
@@ -104,7 +117,7 @@ Purchase success adds:
 }
 ```
 
-Purchase failure adds:
+購買失敗會增加：
 
 ```json
 {
@@ -112,9 +125,19 @@ Purchase failure adds:
 }
 ```
 
-## Event Generator
+折價券情境會增加：
 
-The generator is intentionally simple and stateful:
+```json
+{
+  "coupon_id": "coupon_mayday_001",
+  "remaining_coupons": 0,
+  "failure_reason": "COUPON_SOLD_OUT"
+}
+```
+
+## 事件產生器
+
+熱門商品 generator 是 stateful 的簡化模型：
 
 ```text
 remaining_stock = initial_stock
@@ -133,27 +156,27 @@ sold_out:
   PURCHASE_FAILED with OUT_OF_STOCK increases
 ```
 
-CLI shape:
+CLI 範例：
 
 ```bash
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=30 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
-For local demos, use a lower event rate if Kibana or Elasticsearch returns HTTP 429:
+如果本機 Kibana 或 Elasticsearch 回傳 HTTP 429，可以降低 event rate：
 
 ```bash
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
-For the dashboard story, seed a larger historical data set:
+產生較大的 dashboard 資料集：
 
 ```bash
 ./scripts/seed-dashboard-data.sh
 ```
 
-The default seed generates `14,400` events over the last hour. Timestamps are intentionally denser near the end of the window, so the dashboard shows a hot-product surge rather than a flat test-data line.
+預設會產生 `14,400` 筆事件，並讓時間戳越接近後段越密集，使 dashboard 呈現商品爆紅的趨勢。
 
-Important options:
+重要參數：
 
 - `--rate-per-second`
 - `--duration-seconds`
@@ -163,23 +186,25 @@ Important options:
 - `--malformed-ratio`
 - `--realtime`
 - `--flat-traffic`
+- `--profile`
+- `--base-time`
 
-Seeded runs are used for E2E tests. Unseeded runs are useful for live demos.
+E2E 測試使用 seeded runs；live demo 可以改用 unseeded runs。
 
-## Chapter 3 Alignment
+## 第三章對應
 
-This demo shows Kafka Connect's pipeline components:
+這個 demo 展示 Kafka Connect pipeline components：
 
-- `Runtime`: distributed Kafka Connect worker.
-- `REST API`: connector creation and status inspection.
-- `Plug-ins`: Elasticsearch sink installed through `plugin.path`.
-- `Connector`: Elasticsearch sink connector.
-- `Task`: sink task consumes Kafka partitions.
-- `Converter`: `JsonConverter` converts Kafka bytes into `ConnectRecord`.
-- `SMT`: `Flatten` promotes nested metadata such as `metadata.region` into dashboard-friendly fields such as `metadata_region`; `InsertField` adds `pipeline=connect-search-demo`.
-- `DLQ`: malformed JSON records are routed to `product.events.dlq`.
+- `Runtime`：distributed Kafka Connect worker。
+- `REST API`：connector creation 與 status inspection。
+- `Plug-ins`：Elasticsearch sink 透過 `plugin.path` 載入。
+- `Connector`：Elasticsearch sink connector。
+- `Task`：sink task 從 Kafka partitions 消費資料。
+- `Converter`：`JsonConverter` 把 Kafka bytes 轉成 `ConnectRecord`。
+- `SMT`：`Flatten` 將 `metadata.region` 展平成 `metadata_region`；`InsertField` 加上 `pipeline=connect-search-demo`。
+- `DLQ`：malformed JSON records 會被送到 `product.events.dlq`。
 
-Sink-side flow:
+Sink-side flow：
 
 ```text
 Kafka bytes
@@ -197,51 +222,57 @@ ConnectRecord
 Elasticsearch document
 ```
 
-## Chapter 4 Alignment
+## 第四章對應
 
-This demo also shows pipeline design decisions:
+這個 demo 展示下列 pipeline design decisions：
 
-- Search sink is chosen because the target workload is query, dashboarding, and event inspection.
-- The event schema is intentionally small and dashboard-driven.
-- `product.events` uses 3 partitions so sink task parallelism can be discussed.
-- `tasks.max=2` shows that task count is bounded by partitions and connector behavior.
-- SMT is used for light, record-local reshaping: flattening metadata for dashboard grouping and adding pipeline provenance. It is not used for business logic.
-- Malformed records go to DLQ.
-- Elasticsearch writes are treated as at-least-once.
-- Kafka record key is `event_id`, letting the sink use stable document ids for practical idempotency.
+- 選擇 search sink，因為目標工作負載是查詢、dashboarding 與事件檢索。
+- event schema 依 dashboard 問題設計，而不是任意塞欄位。
+- `product.events` 使用 3 partitions，便於討論 sink task parallelism。
+- `tasks.max=2` 顯示 task 數量受 partitions、connector 行為與外部系統限制。
+- SMT 只做 record-local reshaping：展平 metadata 供 dashboard 分組，以及加入 pipeline provenance；不承擔 business logic。
+- malformed records 進入 DLQ。
+- Elasticsearch writes 以 at-least-once 理解。
+- Kafka record key 使用 `event_id`，讓 sink 可以使用穩定 document id 實作 practical idempotency。
 
-## E2E Criteria
+## E2E 驗證條件
 
-The implementation is complete when `./scripts/e2e.sh` verifies:
+`./scripts/e2e.sh` 會驗證：
 
-- Kafka, Connect, Elasticsearch, and Kibana start.
-- Elasticsearch sink connector plugin is discoverable.
-- `product.events` and `product.events.dlq` are created.
-- Connector and task reach `RUNNING`.
-- Hot product generator writes events to Kafka.
-- Elasticsearch receives indexed documents.
-- Kibana can use the `product-events` data view.
-- Kibana dashboard saved objects can be created for the demo metrics.
-- SMT field `pipeline=connect-search-demo` and SMT-flattened field `metadata_region` appear in indexed documents.
-- Malformed records are written to DLQ.
-- Connect can restart and continue indexing new events.
+- Kafka、Connect、Elasticsearch、Kibana 啟動。
+- Elasticsearch sink connector plug-in 可被發現。
+- `product.events` 與 `product.events.dlq` 建立完成。
+- connector 與 task 進入 `RUNNING`。
+- event generator 寫入 Kafka。
+- Elasticsearch 收到 indexed documents。
+- Kibana 可以使用 `product-events` data view。
+- Kibana dashboard saved objects 可以建立。
+- SMT 欄位 `pipeline=connect-search-demo` 與 `metadata_region` 出現在 indexed documents。
+- malformed records 寫入 DLQ。
+- Connect restart 後仍可繼續 indexing。
 
-## Rerun Isolation
+## 重跑隔離
 
-Demo seed scripts call `./scripts/clean-demo-state.sh` by default. The cleanup removes:
+demo seed scripts 預設會呼叫：
 
-- the sink connector
+```bash
+./scripts/clean-demo-state.sh
+```
+
+cleanup 會移除：
+
+- sink connector
 - `product.events`
 - `product.events.dlq`
 - Kafka Connect internal topics
-- the Elasticsearch `product-events` index
+- Elasticsearch `product-events` index
 
-This keeps repeated demo runs deterministic instead of mixing new events with previous connector offsets, topic contents, or indexed documents.
+這樣重跑 demo 時，不會混入前一次執行留下的 connector offsets、topic contents 或 indexed documents。
 
-The seed scripts also use deterministic event time by default:
+seed scripts 也預設使用 deterministic event time：
 
 ```text
 BASE_TIME=2026-05-01T12:00:00Z
 ```
 
-The Kibana dashboard time range is set to the generated data window during seeding, so reruns show the same event counts, trend buckets, and region/failure distributions.
+Kibana dashboard time range 會在 seeding 時設定到產生資料的時間窗，因此每次重跑都會得到相同的 event counts、trend buckets 與 region/failure distributions。

@@ -1,19 +1,19 @@
 ---
-title: "Kafka Connect Chapter 4 - Designing Effective Data Pipelines"
-audience: "Students new to big data"
-format: "slide-friendly markdown"
+title: "Kafka Connect 第四章 - 設計有效的資料管線"
+audience: "剛接觸大數據的學生"
+format: "投影片友善 Markdown"
 demo: "Kafka -> Kafka Connect -> Elasticsearch -> Kibana"
 ---
 
-# Kafka Connect Chapter 4
+# Kafka Connect 第四章
 
-Designing Effective Data Pipelines
+設計有效的資料管線
 
 給完全不熟大數據的同學看的版本
 
 ---
 
-# Opening Story
+# 開場故事
 
 想像今天晚上 8 點有一批限量折價券開搶。
 
@@ -29,12 +29,12 @@ Designing Effective Data Pipelines
 
 ---
 
-# The Demo Pipeline
+# Demo 資料管線
 
 我們的 demo 是一條資料輸送帶。
 
 ```text
-Event Generator
+事件產生器
     |
     v
 Kafka topic: product.events
@@ -53,7 +53,7 @@ Kafka Connect 的角色：依照 connector 設定，把 Kafka 裡的資料持續
 
 ---
 
-# Chapter 4 Main Question
+# 第四章的核心問題
 
 第四章不是只問：
 
@@ -72,15 +72,15 @@ Kafka Connect 的角色：依照 connector 設定，把 Kafka 裡的資料持續
 
 ---
 
-# One Sentence Summary
+# 一句話摘要
 
-Kafka Connect Chapter 4 is about designing pipelines that are:
+Kafka Connect 第四章在討論如何設計具備下列特性的資料管線：
 
-- usable
-- maintainable
-- scalable
-- observable
-- failure-aware
+- 可使用
+- 可維護
+- 可擴展
+- 可觀察
+- 能處理故障
 
 中文講法：
 
@@ -90,7 +90,7 @@ Kafka Connect Chapter 4 is about designing pipelines that are:
 
 ---
 
-# Mental Model
+# 心智模型
 
 把 Kafka Connect 想成資料物流公司。
 
@@ -108,11 +108,11 @@ External system = 收貨地點
 
 ---
 
-# Design Question 1
+# 設計問題 1
 
 ## 要選哪一條資料路線？
 
-也就是：Choosing a Connector
+也就是：選擇 connector。
 
 先問三件事：
 
@@ -122,7 +122,7 @@ External system = 收貨地點
 
 ---
 
-# Source vs Sink
+# Source 與 Sink
 
 ```text
 Source connector
@@ -142,7 +142,7 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
-# Demo Mapping
+# 對應到 Demo
 
 為什麼選 Elasticsearch sink？
 
@@ -155,11 +155,11 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
-# Design Question 2
+# 設計問題 2
 
 ## 資料長什麼樣子？
 
-也就是：Defining Data Models
+也就是：定義 data model。
 
 資料模型會直接影響查詢、擴展與除錯。
 
@@ -174,7 +174,7 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
-# Bad Event Example
+# 不利於分析的事件範例
 
 這種資料不利於建立 dashboard：
 
@@ -194,7 +194,7 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
-# Better Event Example
+# 較適合分析的事件範例
 
 ```json
 {
@@ -216,11 +216,11 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
-# Design Question 3
+# 設計問題 3
 
 ## 轉換要放哪裡？
 
-Chapter 4 提到 ETL vs ELT。
+第四章提到 ETL 與 ELT。
 
 ```text
 ETL: Extract -> Transform -> Load
@@ -231,7 +231,7 @@ Kafka Connect 也可以做 transformation，但只適合輕量操作。
 
 ---
 
-# SMT Is Not Business Logic
+# SMT 不是商業邏輯
 
 Kafka Connect SMT 適合：
 
@@ -262,7 +262,7 @@ InsertField:
 
 ---
 
-# Why This Matters
+# 為什麼這件事重要
 
 如果把太多商業邏輯放進 Kafka Connect：
 
@@ -280,7 +280,7 @@ Kafka Streams / Flink / Spark 處理複雜邏輯。
 
 ---
 
-# Design Question 4
+# 設計問題 4
 
 ## 要設定多少個 task？
 
@@ -292,7 +292,7 @@ Kafka Connect 的平行處理單位是 task。
 
 ---
 
-# Tasks vs Partitions
+# Tasks 與 Partitions
 
 Sink connector 讀 Kafka topic。
 
@@ -313,7 +313,7 @@ partition 數量會限制 sink task 的有效並行度
 
 ---
 
-# Demo Mapping
+# 對應到 Demo
 
 我們的 demo：
 
@@ -330,11 +330,11 @@ Elasticsearch sink: tasks.max=2
 
 ---
 
-# Design Question 5
+# 設計問題 5
 
 ## 資料格式誰負責？
 
-Chapter 4 把責任拆成三層：
+第四章把責任拆成三層：
 
 ```text
 Connector
@@ -349,7 +349,7 @@ Transformation
 
 ---
 
-# Sink Pipeline Flow
+# Sink Pipeline 流程
 
 我們的 demo 是 sink pipeline。
 
@@ -369,11 +369,11 @@ ConnectRecord
 Elasticsearch document
 ```
 
-這對應 Chapter 4 的 data format 責任分工：converter 處理 bytes 與 `ConnectRecord` 的轉換，SMT 修改 `ConnectRecord`，sink connector 將資料寫入目標系統。
+這對應第四章的 data format 責任分工：converter 處理 bytes 與 `ConnectRecord` 的轉換，SMT 修改 `ConnectRecord`，sink connector 將資料寫入目標系統。
 
 ---
 
-# Design Question 6
+# 設計問題 6
 
 ## Schema 要不要管？
 
@@ -392,7 +392,7 @@ Schema 的作用：
 
 ---
 
-# Our Demo Choice
+# Demo 的取捨
 
 我們 demo 目前用 schemaless JSON。
 
@@ -410,7 +410,7 @@ Schema 的作用：
 
 ---
 
-# Design Question 7
+# 設計問題 7
 
 ## Kafka Connect 怎麼記住狀態？
 
@@ -430,7 +430,7 @@ connect-status
 
 ---
 
-# Demo Mapping
+# 對應到 Demo
 
 我們的 E2E 會檢查：
 
@@ -446,7 +446,7 @@ connect-status-hot-product-demo
 
 ---
 
-# Design Question 8
+# 設計問題 8
 
 ## 壞資料怎麼辦？
 
@@ -469,7 +469,7 @@ connect-status-hot-product-demo
 
 ---
 
-# Dead Letter Queue
+# Dead Letter Queue（DLQ）
 
 DLQ 是 sink pipeline 的問題資料暫存區。
 
@@ -487,7 +487,7 @@ errors.deadletterqueue.topic.name=product.events.dlq
 
 ---
 
-# Why DLQ Is Useful
+# 為什麼 DLQ 有用
 
 沒有 DLQ：
 
@@ -512,11 +512,11 @@ DLQ topic 仍需要監控與補償流程。
 
 ---
 
-# Design Question 9
+# 設計問題 9
 
 ## 送資料的保證是什麼？
 
-Chapter 4 提到三種語意：
+第四章提到三種語意：
 
 - at-most-once
 - at-least-once
@@ -530,7 +530,7 @@ Chapter 4 提到三種語意：
 
 ---
 
-# Our Demo Semantics
+# Demo 的語意保證
 
 這個 demo 的精確說法：
 
@@ -556,7 +556,7 @@ write.method = upsert
 
 ---
 
-# Demo Moment
+# Demo 觀察重點
 
 現在看 Kibana dashboard。
 
@@ -576,7 +576,7 @@ write.method = upsert
 
 ---
 
-# AI Load Generator Story
+# AI 驅動 Load Generator 的設計
 
 為了讓 dashboard 更像真實世界，我們做了 profile-driven load generator。
 
@@ -592,7 +592,7 @@ Java generator 負責依照 profile 穩定、可重跑地產生事件。
 
 ---
 
-# Flash-Sale Coupon Profile
+# 限量折價券 Profile
 
 ```text
 24,000 events
@@ -607,7 +607,7 @@ sold-out failures spike later
 
 ---
 
-# Feedback Loop
+# 回饋迴圈
 
 我們不只依賴目測判斷資料是否合理。
 
@@ -623,7 +623,7 @@ sold-out failures spike later
 
 ---
 
-# What Students Should Remember
+# 學生應該記住什麼
 
 Kafka Connect 不是無條件保證正確性的黑盒。
 
@@ -642,7 +642,7 @@ Kafka Connect 不是無條件保證正確性的黑盒。
 
 ---
 
-# The Big Picture
+# 整體觀念
 
 ```text
 Good pipeline design
@@ -658,7 +658,7 @@ Good pipeline design
 
 ---
 
-# Closing
+# 結尾
 
 如果只記一句話：
 

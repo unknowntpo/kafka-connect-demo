@@ -1,9 +1,9 @@
-# Kafka Connect Hot Product Search Demo
+# Kafka Connect 熱門商品搜尋與觀測 Demo
 
-This demo shows a simple observability pipeline for a hot-selling product:
+這個專案示範一條簡化但完整的 Kafka Connect 觀測管線：把熱門商品或限量折價券的事件送進 Kafka，再透過 Kafka Connect 寫入 Elasticsearch，最後在 Kibana dashboard 觀察趨勢。
 
 ```text
-Java Hot Product Event Generator
+Java 事件產生器
         |
         | JSON events
         v
@@ -15,34 +15,34 @@ Kafka topic: product.events
 Elasticsearch index: product-events
         |
         v
-Kibana dashboard/search UI
+Kibana dashboard / search UI
 ```
 
-The story is intentionally small: many users view one product, click buy, some purchases succeed, stock drops, and failed purchases rise after the product sells out.
+故事刻意設計得容易理解：許多使用者瀏覽商品、點擊購買或搶折價券；部分操作成功，庫存逐漸下降；售罄後失敗事件上升。學生可以直接在 Kibana 上看到資料流動與事件趨勢。
 
-## What It Demonstrates
+## 這個 Demo 展示什麼
 
-Chapter 3 concepts:
+Chapter 3 相關概念：
 
 - Kafka Connect distributed runtime
-- plugin discovery through `/connector-plugins`
-- connector lifecycle through REST
-- connector and task status
+- 透過 `/connector-plugins` 檢查 plug-in
+- 透過 REST API 管理 connector lifecycle
+- connector 與 task 狀態
 - sink-side converter flow
-- SMT with `Flatten` and `InsertField`
-- DLQ for malformed records
-- Connect internal topics
+- `Flatten` 與 `InsertField` SMT
+- malformed records 的 DLQ
+- Kafka Connect internal topics
 
-Chapter 4 concepts:
+Chapter 4 相關概念：
 
-- connector selection for search/observability
-- event model design for dashboard queries
-- partitions and `tasks.max`
+- 如何為搜尋與觀測情境選擇 connector
+- 如何根據 dashboard 需求設計 event model
+- partitions 與 `tasks.max` 的關係
 - sink failure visibility
 - at-least-once sink behavior
-- practical idempotency using Kafka record key as Elasticsearch document id
+- 使用 Kafka record key 作為 Elasticsearch document id，達成實務上的 idempotency
 
-## Services
+## 服務與網址
 
 - Kafka broker: `localhost:9092`
 - Kafka Connect REST: `localhost:8083`
@@ -50,7 +50,7 @@ Chapter 4 concepts:
 - Elasticsearch: `http://localhost:9200`
 - Kibana: `http://localhost:5601`
 
-## Quick Start
+## 快速開始
 
 ```bash
 ./scripts/start.sh
@@ -61,55 +61,55 @@ Chapter 4 concepts:
 ./scripts/inspect-status.sh
 ```
 
-Generate hot product events:
+產生一小批熱門商品事件：
 
 ```bash
 ./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
 ```
 
-For a more realistic dashboard, seed one hour of historical hot-sale traffic:
+產生較真實的熱門商品 dashboard 資料：
 
 ```bash
 ./scripts/seed-dashboard-data.sh
 ```
 
-By default this generates `14,400` events across the last hour, with denser traffic near the end of the window.
+預設會產生 `14,400` 筆事件，並讓事件越接近時間窗後段越密集，以模擬商品變熱的趨勢。
 
-For an AI-powered flash-sale coupon scenario, generate and score a profile-driven load:
+產生 AI profile-driven 的限量折價券搶購資料：
 
 ```bash
 ./scripts/seed-ai-load-profile.sh
 ```
 
-This uses [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) to generate `24,000` events over the last 80 minutes, then runs [scripts/score-load-profile.sh](scripts/score-load-profile.sh) against Elasticsearch. The design is documented in [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md).
+這個腳本會使用 [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) 產生 `24,000` 筆事件，並透過 [scripts/score-load-profile.sh](scripts/score-load-profile.sh) 查詢 Elasticsearch 進行評分。設計說明在 [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md)。
 
-The seed scripts are isolated by default. Before generating data, they remove the connector, Kafka data topics, Kafka Connect internal topics, and the Elasticsearch index so repeated runs do not inherit previous state. They also use a deterministic default base time, `2026-05-01T12:00:00Z`, so repeated runs produce the same dashboard time window and aggregate results.
+seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。腳本也使用固定的預設 base time：`2026-05-01T12:00:00Z`，因此每次重跑會得到相同的 dashboard 時間窗與聚合結果。
 
-Inspect Kafka:
+查看 Kafka topic：
 
 ```bash
 ./scripts/inspect-topic.sh product.events 5
 ```
 
-Inspect Elasticsearch:
+查看 Elasticsearch：
 
 ```bash
 ./scripts/verify-sink.sh
 ```
 
-Create the Kibana dashboard:
+建立 Kibana dashboard：
 
 ```bash
 ./scripts/create-kibana-dashboard.sh
 ```
 
-Open:
+打開 dashboard：
 
 ```text
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
-## Event Types
+## 事件類型
 
 - `PRODUCT_VIEWED`
 - `BUY_CLICKED`
@@ -122,7 +122,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - `COUPON_CLAIM_SUCCEEDED`
 - `COUPON_CLAIM_FAILED`
 
-Example event:
+範例事件：
 
 ```json
 {
@@ -145,51 +145,51 @@ Example event:
 }
 ```
 
-## Dashboard Targets
+## Dashboard 會看到什麼
 
-The included Kibana dashboard shows:
+內建 Kibana dashboard 包含：
 
-- Total indexed events
-- Event volume over time, split by `event_type`
-- Purchase outcomes: buy clicks, succeeded purchases, failed purchases
-- Failure reasons, especially `OUT_OF_STOCK`
-- Top active generated users
-- Traffic by region using `metadata_region`, produced by the `Flatten` SMT
+- 已索引事件總數
+- 依 `event_type` 切分的事件量趨勢
+- business outcomes：點擊、成功、失敗
+- failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
+- 活躍使用者分布
+- 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
 
-## E2E Verification
+## E2E 驗證
 
-Run:
+執行：
 
 ```bash
 ./scripts/e2e.sh
 ```
 
-The E2E test verifies:
+E2E 會驗證：
 
 - stack startup
-- connector plugin discovery
-- topic creation with 3 partitions
-- connector registration through REST
-- connector and task `RUNNING`
-- event generation into Kafka
-- documents indexed into Elasticsearch
-- SMT field `pipeline=connect-search-demo`
-- SMT-flattened field `metadata_region`
-- malformed records routed to `product.events.dlq`
-- Connect restart and continued indexing
-- internal topic creation
+- connector plug-in discovery
+- 建立 3 partitions 的 `product.events`
+- 透過 REST API 註冊 connector
+- connector 與 task 進入 `RUNNING`
+- event generator 寫入 Kafka
+- Elasticsearch 收到 indexed documents
+- SMT 欄位 `pipeline=connect-search-demo`
+- SMT 展平後的 `metadata_region`
+- malformed records 被送到 `product.events.dlq`
+- Connect restart 後仍可繼續 indexing
+- Kafka Connect internal topics 已建立
 
-The dashboard setup script can be rerun safely; it overwrites the same saved object ids.
+Dashboard setup script 可以重跑；它會覆蓋相同 saved object ids。dashboard 預設 refresh interval 是 30 秒，避免本機 Elasticsearch container 壓力過大。seed 腳本會覆蓋 dashboard time range，使它對齊固定產生的事件時間窗。
 
-The dashboard default time range is 90 minutes and the refresh interval is 30 seconds to avoid overloading a small local Elasticsearch container during demos. The seed scripts override the dashboard time range to match their deterministic generated event window.
+## 重置
 
-## Reset
+完整關閉並清掉 Docker volumes：
 
 ```bash
 ./scripts/reset.sh
 ```
 
-For a clean rerun while the stack is already running:
+如果 stack 已經在執行，只想做一次乾淨重跑：
 
 ```bash
 ./scripts/clean-demo-state.sh

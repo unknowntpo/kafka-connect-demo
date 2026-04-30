@@ -1,19 +1,19 @@
-# AI-Powered Load Generator Design
+# AI 驅動 Load Generator 設計
 
-## Goal
+## 目標
 
-The generator should create realistic event streams for demo dashboards without hard-coding one fixed traffic curve.
+這個 generator 的目標是產生接近真實情境的事件流，讓學生在 dashboard 上看到有意義的趨勢，而不是只有固定筆數的測試資料。
 
-The practical design is two-stage:
+實作採用兩階段設計：
 
 ```text
 LLM / AI planner
     |
-    | generates a load profile JSON
+    | 產生 load profile JSON
     v
 Deterministic Java event generator
     |
-    | executes the profile into Kafka
+    | 依照 profile 寫入 Kafka
     v
 Kafka Connect -> Elasticsearch -> Kibana
     |
@@ -22,82 +22,99 @@ Kafka Connect -> Elasticsearch -> Kibana
 Feedback loop and profile tuning
 ```
 
-The LLM should not generate every event one by one. That would be slow, expensive, hard to reproduce, and hard to test. Instead, AI generates the scenario characteristics: phases, event weights, inventory, failure modes, user scale, and time-shape. The Java generator turns those characteristics into repeatable events.
+LLM 不應逐筆產生每一個 event。逐筆產生會太慢、成本高、難以重現，也不容易測試。較合理的做法是讓 AI 產生 scenario characteristics：phases、event weights、inventory、failure modes、user scale 與 time shape。Java generator 再依照這些特徵穩定產生可重跑的事件。
 
-## Example Scenario: Flash-Sale Coupon
+## 範例情境：限量折價券搶購
 
-User-facing story:
+使用者故事：
 
 ```text
-A limited discount coupon drops. Many users refresh the page, enter a waiting room,
-some claim coupons successfully, then coupon inventory reaches zero and failures spike.
+一批限量折價券開放領取。
+大量使用者重新整理頁面，部分使用者進入 waiting room。
+一部分使用者成功領券。
+折價券數量歸零後，失敗事件開始上升。
 ```
 
-The profile lives at:
+profile 檔案：
 
 ```text
 profiles/flash-sale-coupon.json
 ```
 
-Important profile fields:
+重要欄位：
 
-- `total_events`: target event count.
-- `duration_seconds`: historical time window to generate.
-- `inventory`: limited coupon quantity.
-- `time_skew_power`: controls how strongly traffic concentrates near the end of the window.
-- `phases`: ordered behavioral phases such as teaser, waiting room, drop open, and sold-out pressure.
-- `event_weights`: weighted event distribution per phase.
-- `sold_out_event_weights`: event distribution after inventory reaches zero.
-- `failure_weights`: realistic failure reasons for that phase.
+- `total_events`：目標事件數。
+- `duration_seconds`：要產生的歷史時間窗。
+- `inventory`：限量折價券數量。
+- `time_skew_power`：控制事件是否集中在時間窗後段。
+- `phases`：行為階段，例如 teaser、waiting room、drop open、sold-out pressure。
+- `event_weights`：各階段的事件類型權重。
+- `sold_out_event_weights`：inventory 歸零後的事件類型權重。
+- `failure_weights`：各階段的 failure reasons 權重。
 
-## Why AI Helps
+## AI 的價值
 
-AI is useful for generating the load profile, not replacing the event generator.
+AI 適合用來產生 load profile，而不是取代 event generator。
 
-Good AI-generated profiles can encode:
+好的 AI-generated profile 可以描述：
 
-- Business context: coupon drop, product launch, checkout outage, influencer campaign.
-- Behavioral phases: warmup, queue buildup, release, sold-out pressure, long tail.
-- Event mix: refreshes, views, queue joins, claim attempts, successes, failures.
-- Constraint causality: limited coupon inventory creates later `COUPON_SOLD_OUT` failures.
-- User realism: many users, uneven activity, but no single user dominates the whole stream.
-- Data quality cases: malformed records can still be injected to verify DLQ behavior.
+- business context：coupon drop、product launch、checkout outage、influencer campaign。
+- behavioral phases：warmup、queue buildup、release、sold-out pressure、long tail。
+- event mix：refreshes、views、queue joins、claim attempts、successes、failures。
+- constraint causality：有限 inventory 會導致後段出現 `COUPON_SOLD_OUT`。
+- user realism：大量使用者參與，少數使用者較活躍，但不應由單一使用者主導整個 stream。
+- data quality cases：仍可注入 malformed records，用來驗證 DLQ。
 
-## Feedback Loop
+## 回饋迴圈
 
-The feedback loop is implemented with Elasticsearch queries:
+feedback loop 透過 Elasticsearch queries 實作：
 
 ```bash
 ./scripts/score-load-profile.sh
 ```
 
-The scorer checks:
+scorer 會檢查：
 
-- Total event volume is large enough for dashboard trends.
-- Last 30 minutes have much more traffic than the first 30 minutes.
-- Refreshes and waiting-room events exist.
-- Coupon claims succeed until inventory reaches zero.
-- Sold-out failures dominate after inventory depletion.
-- User distribution is broad enough.
-- Kafka Connect SMT fields exist on every indexed document: `pipeline=connect-search-demo` for provenance and `metadata_region` for dashboard grouping.
+- 總事件量是否足以支撐 dashboard 趨勢。
+- 後 30 分鐘流量是否明顯高於前 30 分鐘。
+- refresh 與 waiting-room events 是否存在。
+- coupon claims 是否在 inventory 歸零前成功。
+- inventory 歸零後，sold-out failures 是否成為主要失敗原因。
+- user distribution 是否足夠分散。
+- Kafka Connect SMT 產生的欄位是否存在：`pipeline=connect-search-demo` 用於 provenance，`metadata_region` 用於 dashboard grouping。
 
-To generate and score the current profile:
+產生並評分目前的 profile：
 
 ```bash
 ./scripts/seed-ai-load-profile.sh
 ```
 
-The script cleans demo state by default, recreates mappings, registers the connector, creates the Kibana dashboard, generates profile events through Kafka, waits for indexing, and prints the score. Cleanup removes the connector, Kafka data topics, Kafka Connect internal topics, and the Elasticsearch index. The included flash-sale profile generates 80 minutes of history against a deterministic default base time, `2026-05-01T12:00:00Z`, so repeated runs produce the same aggregate results.
+這個腳本預設會先清理 demo state、重建 Elasticsearch mapping、註冊 connector、建立 Kibana dashboard、透過 Kafka 產生 profile events、等待 indexing 完成，最後輸出 score。
 
-## Extension Path
+cleanup 會移除：
 
-A real LLM integration can produce files with the same JSON contract:
+- sink connector
+- Kafka data topics
+- Kafka Connect internal topics
+- Elasticsearch index
+
+內建 flash-sale profile 使用固定 base time：
+
+```text
+2026-05-01T12:00:00Z
+```
+
+因此重跑時會得到相同的 aggregate results。這對課堂 demo 很重要，因為講者可以預期 dashboard 與 scorer 輸出的數字。
+
+## 擴充方式
+
+真正接上 LLM 時，可以讓 LLM 產生相同 JSON contract 的檔案：
 
 ```text
 profiles/<scenario>.json
 ```
 
-Example prompt shape:
+prompt 方向範例：
 
 ```text
 Generate a Kafka event load profile for a limited coupon flash sale.
@@ -105,4 +122,4 @@ Return JSON only. Include phases, event weights, failure weights, inventory,
 duration, total event count, and expected dashboard signals.
 ```
 
-The deterministic generator and scorer do not need to change when a new AI-generated profile is added.
+只要 JSON contract 不變，deterministic generator 與 scorer 不需要修改。這讓 AI profile 可以持續演進，同時保留可測試、可重跑的 demo 行為。
