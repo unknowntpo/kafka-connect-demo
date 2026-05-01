@@ -58,6 +58,22 @@ Chapter 4 相關概念：
 - Elasticsearch: `http://localhost:9200`
 - Kibana: `http://localhost:5601`
 
+## 投影片
+
+Slidev 投影片在 [docs/chapter-4-intro-slides.md](/Users/unknowntpo/repo/unknowntpo/kafka-connect-demo/docs/chapter-4-intro-slides.md)。
+
+建議呈現順序：
+
+```text
+問題場景 -> 追蹤指標 -> Database / Elasticsearch 取捨 -> Kafka -> Kafka Connect -> Demo -> 第四章 component breakdown
+```
+
+如果本機已安裝 Slidev，可以用下列方式播放：
+
+```bash
+npx slidev docs/chapter-4-intro-slides.md
+```
+
 ## 快速開始
 
 ```bash

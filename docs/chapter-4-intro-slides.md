@@ -1,55 +1,409 @@
 ---
-title: "Kafka Connect 第四章 - 設計有效的資料管線"
-audience: "剛接觸大數據的學生"
-format: "投影片友善 Markdown"
-demo: "Kafka -> Kafka Connect -> Elasticsearch -> Kibana"
+theme: default
+title: Kafka Connect 第四章 - 用熱門商品 Demo 設計資料管線
+info: |
+  這份 Slidev 投影片用電商熱門商品觀測情境，介紹 Kafka、Kafka Connect、Elasticsearch 與 Kibana 如何組成一條可觀察的資料管線。
+class: text-left
+drawings:
+  persist: false
+transition: slide-left
+mdc: true
 ---
 
 # Kafka Connect 第四章
 
-設計有效的資料管線
-
-給完全不熟大數據的同學看的版本
-
----
-
-# 開場故事
-
-想像今天晚上 8 點有一批限量折價券開搶。
+用熱門商品 Demo 理解資料管線設計
 
 ```text
-很多人打開網頁
-很多人一直按重新整理
-一部分人成功領到券
-券被領完後，更多人看到「已售完」
-營運團隊想即時看到發生什麼事
+Kafka -> Kafka Connect -> Elasticsearch -> Kibana
 ```
 
-問題是：這些事件要怎麼從系統送到 dashboard？
+給剛接觸大數據與 Kafka Connect 的學生
+
+---
+layout: section
+---
+
+# 先從一個明確問題開始
 
 ---
 
-# Demo 資料管線
+# 電商平台想知道什麼？
 
-我們的 demo 是一條資料輸送帶。
+假設今晚 8 點有一個商品突然爆紅。
+
+營運與工程團隊想立刻回答：
+
+- 這個商品的流量是不是正在快速上升？
+- 使用者是在瀏覽、點擊購買，還是一直重新整理？
+- 購買或領券成功率是否下降？
+- 失敗原因是售罄、限流，還是付款失敗？
+- 哪些地區壓力最大？
+- 是否有少數使用者造成異常高頻操作？
+
+核心問題：
 
 ```text
-事件產生器
+熱門商品的各種情況，要怎麼被即時追蹤與觀察？
+```
+
+---
+
+# 我們要觀察的不是一筆訂單
+
+交易系統通常關心：
+
+- 訂單是否成立
+- 庫存是否扣除
+- 付款是否成功
+
+但熱門商品觀測還需要看事件流：
+
+- 每分鐘有多少瀏覽？
+- 點擊量是否突然上升？
+- 失敗事件是否集中在某個時間點？
+- 售罄後使用者是否仍大量重試？
+
+這類問題更接近：
+
+```text
+event search + time-series aggregation + dashboard
+```
+
+---
+layout: section
+---
+
+# 先定義要追蹤的指標
+
+---
+
+# 為什麼要先定義 Metrics？
+
+如果一開始沒有定義指標，後面會不知道：
+
+- event 應該長什麼樣子
+- Kafka topic 裡要放哪些欄位
+- Elasticsearch 要怎麼查
+- Kibana dashboard 要放哪些 panel
+- demo 成功與否要怎麼判斷
+
+因此順序應該是：
+
+```text
+業務問題 -> 指標 -> 事件模型 -> 資料管線 -> Dashboard
+```
+
+不是先做 pipeline，再回頭猜要看什麼。
+
+---
+
+# 本 Demo 要追蹤的 Metrics
+
+我們關心的是「熱門商品或限量折價券是否正在爆量，以及爆量後發生什麼事」。
+
+| 指標 | 問題 |
+| --- | --- |
+| 事件總數 | Kafka Connect 是否持續把事件寫入 Elasticsearch？ |
+| 事件類型趨勢 | 流量是在瀏覽、刷新、點擊、成功，還是失敗？ |
+| 成功 / 失敗 / 需求壓力 | 使用者需求是否高於系統或庫存可承受範圍？ |
+| 失敗原因 | 是售罄、限流，還是付款失敗？ |
+| 高頻操作使用者 | 是否有重複刷新、搶購失敗或疑似 bot 行為？ |
+| 地區流量 | 哪些地區的壓力最高？ |
+
+---
+
+# 指標會反推事件欄位
+
+要追蹤上述 metrics，event 至少需要：
+
+```text
+event_type
+occurred_at
+user_id
+product_id / coupon_id
+remaining_stock / remaining_coupons
+failure_reason
+metadata.region
+```
+
+這就是為什麼 event model 不是隨便設計的。
+
+Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
+
+---
+layout: section
+---
+
+# 為什麼不能只靠 Database？
+
+---
+
+# Database 適合交易，不適合承擔所有觀測查詢
+
+Database 很適合保存正式狀態：
+
+- 訂單
+- 付款
+- 庫存
+- 使用者資料
+
+但如果 dashboard 直接查交易 DB，熱門商品爆量時會有風險：
+
+- 大量查詢可能影響交易系統。
+- event-style 查詢通常不是交易 DB 的主要設計目標。
+- 每分鐘聚合、失敗原因統計、地區流量分析會和交易 workload 混在一起。
+- 歷史事件查詢與稽核資料可能讓主資料庫膨脹。
+
+精確說法：
+
+```text
+不是 Database 不能存資料，
+而是不應讓交易 DB 同時承擔所有即時觀測壓力。
+```
+
+---
+
+# 為什麼也不是 Application 直接寫 Elasticsearch？
+
+Elasticsearch 適合搜尋、聚合與 dashboard。
+
+但如果電商 application 同步寫 Elasticsearch：
+
+```text
+使用者請求
     |
-    v
+    +-> 寫交易 DB
+    |
+    +-> 寫 Elasticsearch
+```
+
+application 需要自己處理：
+
+- Elasticsearch indexing latency
+- retry 與 backpressure
+- 外部系統短暫失敗
+- 壞資料
+- 重送造成的重複寫入
+- 寫入狀態與監控
+
+問題不在於 Elasticsearch 不能 indexing。
+
+問題是：
+
+```text
+業務 application 不應直接承擔整條資料同步管線的責任。
+```
+
+---
+
+# 需要一個中間層
+
+我們希望 application 做最少的事情：
+
+```text
+產生事件 -> 寫入 Kafka
+```
+
+後面的搜尋、觀測、dashboard 寫入，交給資料管線處理。
+
+這樣可以把責任切開：
+
+- Application：處理使用者請求與業務邏輯。
+- Kafka：接住事件流，提供緩衝與重放能力。
+- Kafka Connect：把 Kafka events 寫到外部系統。
+- Elasticsearch：提供事件搜尋與聚合。
+- Kibana：提供可視化 dashboard。
+
+---
+layout: section
+---
+
+# Kafka 能做到什麼？
+
+---
+
+# Kafka 的角色：先把事件穩定接住
+
+Kafka 在這個 demo 中不是 dashboard，也不是資料庫。
+
+它的角色是事件緩衝層：
+
+- decoupling：application 不需要知道後面有哪些 consumer。
+- buffering：Elasticsearch 慢一點時，事件仍先留在 Kafka。
+- replay：需要重建 index 或重新消費時，可以從 topic 讀回來。
+- partitioning：事件可以分散到多個 partition，提高消費平行度。
+- durability：事件不只存在 application memory。
+
+一句話：
+
+```text
+Kafka 讓事件先被可靠接住，再交給後面的系統慢慢處理。
+```
+
+---
+
+# Demo 中的 Kafka Topic
+
+我們的事件先進入：
+
+```text
+product.events
+```
+
+裡面包含熱門商品與限量折價券事件：
+
+- `PRODUCT_VIEWED`
+- `BUY_CLICKED`
+- `PURCHASE_SUCCEEDED`
+- `PURCHASE_FAILED`
+- `PAGE_REFRESHED`
+- `COUPON_CLAIM_SUCCEEDED`
+- `COUPON_CLAIM_FAILED`
+
+Kafka 只負責承接與保存事件流。
+
+它不負責產生 dashboard，也不負責把資料寫進 Elasticsearch。
+
+---
+layout: section
+---
+
+# Kafka Connect 把兩邊串起來
+
+---
+
+# Kafka Connect 的角色
+
+Kafka Connect 負責把 Kafka topic 接到外部系統。
+
+在這個 demo 中：
+
+```text
 Kafka topic: product.events
-    |
-    v
-Kafka Connect
-    |
-    v
-Elasticsearch
-    |
-    v
+        |
+        v
+Kafka Connect Elasticsearch Sink
+        |
+        v
+Elasticsearch index: product-events
+```
+
+我們不是自己寫一支 Java consumer 來同步 Elasticsearch。
+
+我們使用 Kafka Connect，因為它提供標準化的：
+
+- connector lifecycle
+- task model
+- converter
+- SMT
+- DLQ
+- status API
+- internal topics
+
+---
+
+# 完整 Demo 架構
+
+```text
+Java 事件產生器
+        |
+        | JSON events
+        v
+Kafka topic: product.events
+        |
+        | Kafka Connect Elasticsearch Sink
+        | JsonConverter + SMT + DLQ
+        v
+Elasticsearch index: product-events
+        |
+        v
 Kibana Dashboard
 ```
 
-Kafka Connect 的角色：依照 connector 設定，把 Kafka 裡的資料持續送到外部系統。
+這條管線的重點不是「有資料」。
+
+重點是：
+
+```text
+資料流動過程可觀察、可維護、可重跑、可處理錯誤。
+```
+
+---
+layout: section
+---
+
+# Demo：即時流量進 Dashboard
+
+---
+
+# Demo 要讓學生看到什麼？
+
+Demo 不只是跑指令。
+
+我們要讓學生在 dashboard 上看到：
+
+- 事件總數快速累積。
+- 事件類型隨時間變化。
+- 成功與失敗比例改變。
+- 售罄或限流造成失敗原因集中。
+- 高頻操作使用者浮現。
+- 不同地區有不同流量壓力。
+
+這些 panel 對應到一個真實問題：
+
+```text
+商品是不是正在爆量？
+爆量後，系統與使用者遇到了什麼狀況？
+```
+
+---
+
+# 實際 Demo 指令
+
+啟動 stack：
+
+```bash
+./scripts/start.sh
+./scripts/wait-for-connect.sh
+./scripts/create-topics.sh
+./scripts/create-search-resources.sh
+./scripts/register-connectors.sh
+./scripts/create-kibana-dashboard.sh
+```
+
+產生可重跑的 AI profile-driven 流量：
+
+```bash
+./scripts/seed-ai-load-profile.sh
+```
+
+Dashboard：
+
+```text
+http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
+```
+
+---
+
+# Dashboard Panel Review
+
+目前 dashboard 觀察項目：
+
+| Panel | 目的 |
+| --- | --- |
+| 事件總數 | 確認 Kafka Connect 已將事件寫入 Elasticsearch |
+| 事件類型趨勢 | 看瀏覽、刷新、成功、失敗如何隨時間變化 |
+| 業務結果 | 看成功、失敗、需求壓力的整體比例 |
+| 失敗原因 | 看售罄、限流、付款失敗是否集中 |
+| 高頻操作使用者 | 找出重複刷新、搶購失敗或疑似 bot 行為 |
+| 地區流量 | 比較不同地區的壓力分布 |
+
+---
+layout: section
+---
+
+# Demo 之後，再拆第四章概念
 
 ---
 
@@ -63,349 +417,114 @@ Kafka Connect 的角色：依照 connector 設定，把 Kafka 裡的資料持續
 
 而是問：
 
-```text
-這條 pipeline 是否容易維護？
-發生故障時是否能觀察與定位？
-資料量變大時是否能擴展？
-資料格式改變時是否有明確的演進策略？
-```
+- 這條 pipeline 是否容易維護？
+- 發生故障時是否能觀察與定位？
+- 資料量變大時是否能擴展？
+- 資料格式改變時是否有演進策略？
+- 外部系統失敗時是否會拖垮 application？
 
 ---
 
-# 一句話摘要
+# Component 1：Connector 選型
 
-Kafka Connect 第四章在討論如何設計具備下列特性的資料管線：
-
-- 可使用
-- 可維護
-- 可擴展
-- 可觀察
-- 能處理故障
-
-中文講法：
+先判斷資料方向：
 
 ```text
-不是只把資料搬過去，而是要讓資料流動過程可觀察、可維護、可恢復。
-```
+Source connector:
+  外部系統 -> Kafka
 
----
-
-# 心智模型
-
-把 Kafka Connect 想成資料物流公司。
-
-```text
-Kafka = 倉庫
-Connector = 貨車路線
-Task = 真正開車送貨的人
-Converter = 翻譯包裹格式的人
-SMT = 在包裹上貼標籤的人
-DLQ = 問題包裹暫存區
-External system = 收貨地點
-```
-
-第四章可理解為：如何設計這套資料物流系統，使它在資料量、故障與格式變更下仍可運作。
-
----
-
-# 設計問題 1
-
-## 要選哪一條資料路線？
-
-也就是：選擇 connector。
-
-先問三件事：
-
-- 資料方向是 source 還是 sink？
-- connector 授權、維護、支援是否可信？
-- connector 功能是否符合需求？
-
----
-
-# Source 與 Sink
-
-```text
-Source connector
-外部系統 -> Kafka
-
-Sink connector
-Kafka -> 外部系統
+Sink connector:
+  Kafka -> 外部系統
 ```
 
 我們的 demo 是 sink：
 
 ```text
-Kafka -> Elasticsearch / Kibana
+Kafka -> Elasticsearch
 ```
 
-因為我們想把事件變成可以搜尋、可以視覺化的資料。
+原因：我們要把 Kafka events 變成可以搜尋、聚合與視覺化的資料。
 
 ---
 
-# 為什麼需要 Kafka Connect
+# Component 2：Event Model
 
-如果只是 demo 最短路徑，可以寫一支 Java consumer：
+Dashboard 想回答什麼，event 就要包含對應欄位。
 
-```text
-Kafka -> Java consumer -> Elasticsearch
-```
-
-但這樣會把 connector lifecycle、offset、錯誤資料、重啟行為、平行化與監控狀態都變成 application code 的責任。
-
-Kafka Connect 的教學價值在於：它把 Kafka 與外部系統的整合變成一條可設定、可觀察、可重啟的標準 pipeline。
-
----
-
-# Kafka Connect 在 Demo 做什麼
-
-在這個 demo 中，Kafka Connect 負責：
-
-- 從 `product.events` 讀取事件
-- 用 `JsonConverter` 轉成 ConnectRecord
-- 用 SMT 展平欄位並加上來源標記
-- 寫入 Elasticsearch `product-events`
-- 將壞資料送到 DLQ
-- 提供 connector 與 task 狀態
-
-精確說法：
-
-```text
-Kafka Connect 不是業務邏輯處理器。
-它是 Kafka 與外部系統之間的資料整合層。
-```
-
----
-
-# 對應到 Demo
-
-為什麼選 Elasticsearch sink？
-
-- Kibana 可以做 dashboard
-- Elasticsearch 適合查詢事件
-- 適合 log indexing、監控、稽核、事件搜尋
-- 初學者可以直接確認資料已經寫入目標系統
-
-這比把資料寫到某個看不見的系統更適合 demo。
-
----
-
-# 為什麼選 Elasticsearch
-
-本 demo 要展示的是搜尋與觀測。
-
-因此目標系統需要：
-
-- 接收 JSON events
-- 依時間查詢趨勢
-- 依事件類型與失敗原因聚合
-- 搜尋單筆或一組事件
-- 快速建立 dashboard
-
-Elasticsearch + Kibana 剛好覆蓋這些需求。
-
----
-
-# 與其他工具相比
-
-Elasticsearch 不是唯一選項。
-
-```text
-OpenSearch:
-  類似 Elasticsearch，常見於 AWS 生態系
-
-Splunk:
-  企業級 log / security / observability 很強，但教學部署較重
-
-ClickHouse / Druid / Pinot:
-  適合高吞吐 OLAP 聚合，但搜尋與 Kibana-style dashboard 不是本 demo 主線
-
-Grafana Loki:
-  適合 logs-first 場景，但任意 JSON event 欄位聚合較不直覺
-```
-
-本 demo 選 Elasticsearch，是因為它最能讓學生立即看見 Kafka event 被搜尋、聚合與視覺化。
-
----
-
-# 大型公司會怎麼選
-
-大型公司確實會在搜尋、log analytics、observability 與 security 場景使用 Elasticsearch / Elastic Stack。
-
-但實務選型不會只看工具名。
-
-常見考量：
-
-- 既有雲端平台
-- 授權與商業支援
-- 資料量與保留天數
-- 查詢型態
-- 團隊維運能力
-- 與現有監控、告警、資安流程的整合
-
-因此報告時應避免說「一定要用 Elasticsearch」。
-
-較好的說法是：
-
-```text
-在這個 demo 的教學目標下，Elasticsearch 是最直覺的選擇。
-在 production 中，仍應依需求比較 Elasticsearch、OpenSearch、Splunk 與其他分析平台。
-```
-
----
-
-# 教學方式
-
-這份報告採用「先看結果，再拆管線」：
-
-1. 先看 Kibana dashboard：事件總量、趨勢、成功失敗、售罄原因。
-2. 再看 event model：dashboard 需要哪些欄位。
-3. 再看 Kafka Connect：資料如何從 Kafka 被送到 Elasticsearch。
-4. 最後看 E2E：如何證明 pipeline 真的可重跑、可觀察、可處理壞資料。
-
-這樣學生不需要先懂完整大數據平台，也能理解 Kafka Connect 解決的是哪一段問題。
-
----
-
-# 設計問題 2
-
-## 資料長什麼樣子？
-
-也就是：定義 data model。
-
-資料模型會直接影響查詢、擴展與除錯。
-
-如果 dashboard 要回答「折價券是不是被搶爆了」，事件就應該有：
-
-- `event_type`
-- `occurred_at`
-- `user_id`
-- `coupon_id`
-- `remaining_coupons`
-- `failure_reason`
-
----
-
-# 不利於分析的事件範例
-
-這種資料不利於建立 dashboard：
-
-```json
-{
-  "message": "user did something"
-}
-```
-
-問題：
-
-- 不知道什麼時候發生
-- 不知道哪個使用者
-- 不知道事件類型
-- 不知道成功或失敗
-- 不知道折價券還剩幾張
-
----
-
-# 較適合分析的事件範例
+範例：
 
 ```json
 {
   "event_type": "COUPON_CLAIM_FAILED",
   "coupon_id": "coupon_mayday_001",
   "user_id": "user_01234",
-  "occurred_at": "2026-04-30T12:00:00Z",
+  "occurred_at": "2026-05-01T12:00:00Z",
   "remaining_coupons": 0,
-  "failure_reason": "COUPON_SOLD_OUT"
+  "failure_reason": "COUPON_SOLD_OUT",
+  "metadata": {
+    "region": "ap-northeast-1"
+  }
 }
 ```
 
-這樣 dashboard 才能回答具體問題：
-
-- 什麼事件最多？
-- 什麼時候爆量？
-- 是誰在操作？
-- 失敗原因是什麼？
+沒有明確 event model，dashboard 只能看到模糊訊息。
 
 ---
 
-# 設計問題 3
+# Component 3：Converter
 
-## 轉換要放哪裡？
+Kafka 裡的資料本質上是 bytes。
 
-第四章提到 ETL 與 ELT。
+Kafka Connect 需要 converter 把 bytes 轉成 ConnectRecord：
 
 ```text
-ETL: Extract -> Transform -> Load
-ELT: Extract -> Load -> Transform
+Kafka bytes
+    |
+    | JsonConverter
+    v
+ConnectRecord
 ```
 
-Kafka Connect 也可以做 transformation，但只適合輕量操作。
+這個 demo 使用 schemaless JSON。
+
+教學取捨：
+
+- 初學者容易看懂。
+- Kibana 可以直接看到欄位。
+- production 通常應納入 Schema Registry 與相容性規則。
 
 ---
 
-# SMT 不是商業邏輯
+# Component 4：SMT
 
-Kafka Connect SMT 適合：
+SMT 是 Single Message Transform。
+
+它適合做 record-local 的輕量轉換：
 
 - 加欄位
 - 改欄位名
 - 刪欄位
-- 簡單 route
+- 展平欄位
 
-不適合承擔：
-
-- 跨事件統計
-- join
-- 複雜規則引擎
-- 機器學習推論
-
-我們 demo 的 SMT 做兩件 record-local 的事：
+我們 demo 使用：
 
 ```text
 Flatten:
   metadata.region -> metadata_region
-  metadata.campaign -> metadata_campaign
 
 InsertField:
   pipeline=connect-search-demo
 ```
 
-商業意義：Kibana 可以直接用 `metadata_region` 比較不同地區的搶券壓力與失敗原因。
+SMT 不適合放跨事件統計、join 或複雜商業邏輯。
 
 ---
 
-# 為什麼這件事重要
-
-如果把太多商業邏輯放進 Kafka Connect：
-
-- pipeline 難以測試
-- connector config 會變成難以測試的隱藏邏輯
-- 故障時難以判斷責任邊界
-- 未來更換 connector 或調整 pipeline 會增加維護成本
-
-實務原則：
-
-```text
-Kafka Connect 搬資料。
-Kafka Streams / Flink / Spark 處理複雜邏輯。
-```
-
----
-
-# 設計問題 4
-
-## 要設定多少個 task？
-
-也就是：Tasks and Partitions
+# Component 5：Tasks 與 Partitions
 
 Kafka Connect 的平行處理單位是 task。
 
 但 task 不是越多越好。
-
----
-
-# Tasks 與 Partitions
-
-Sink connector 讀 Kafka topic。
 
 ```text
 Kafka partitions
@@ -414,136 +533,48 @@ Kafka partitions
 Kafka Connect sink tasks
 ```
 
-同一個 partition 同一時間只會被一個 task 讀。
-
-所以：
-
-```text
-partition 數量會限制 sink task 的有效並行度
-```
-
----
-
-# 對應到 Demo
-
-我們的 demo：
+Demo 設定：
 
 ```text
 product.events topic: 3 partitions
 Elasticsearch sink: tasks.max=2
 ```
 
-這可以用來說明：
-
-- `tasks.max=2` 代表最多 2 個 sink task
-- 不是設成 100 就會快 100 倍
-- 實際平行度受 partitions、connector、外部系統限制
+有效平行度會受 partitions、connector 行為與外部系統限制。
 
 ---
 
-# 設計問題 5
+# Component 6：DLQ
 
-## 資料格式誰負責？
+現實世界一定會有壞資料。
 
-第四章把責任拆成三層：
+例如 malformed JSON：
 
-```text
-Connector
-    定義 Kafka Connect 如何和外部系統互動
-
-Converter
-    Kafka bytes <-> ConnectRecord
-
-Transformation
-    ConnectRecord -> ConnectRecord
+```json
+{"event_id":"bad_1",
 ```
 
----
-
-# Sink Pipeline 流程
-
-我們的 demo 是 sink pipeline。
+問題是：
 
 ```text
-Kafka bytes
-    |
-    | JsonConverter
-    v
-ConnectRecord
-    |
-    | SMT: Flatten + InsertField
-    v
-ConnectRecord
-    |
-    | Elasticsearch sink task
-    v
-Elasticsearch document
+整條 pipeline 要停止？
+還是保存壞資料，讓主流程繼續？
 ```
 
-這對應第四章的 data format 責任分工：converter 處理 bytes 與 `ConnectRecord` 的轉換，SMT 修改 `ConnectRecord`，sink connector 將資料寫入目標系統。
-
----
-
-# 設計問題 6
-
-## Schema 要不要管？
-
-Schema 的作用：
+Demo 設定：
 
 ```text
-讓資料不只是 bytes，而是有欄位、有型別、有演進規則。
+errors.tolerance=all
+errors.deadletterqueue.topic.name=product.events.dlq
 ```
 
-真實系統常用：
-
-- Avro
-- JSON Schema
-- Protobuf
-- Schema Registry
+DLQ 不代表資料問題消失；它代表問題資料被隔離，後續仍要監控與補償。
 
 ---
 
-# Demo 的取捨
+# Component 7：Internal Topics
 
-我們 demo 目前用 schemaless JSON。
-
-原因：
-
-- 初學者比較好理解
-- Kibana 可以直接看到欄位
-- 重點放在 Kafka Connect pipeline design
-
-限制在於：
-
-```text
-正式 production pipeline 通常應納入 schema registry 與相容性規則。
-```
-
----
-
-# 設計問題 7
-
-## Kafka Connect 怎麼記住狀態？
-
-Distributed mode 依賴 internal topics：
-
-```text
-connect-configs
-connect-offsets
-connect-status
-```
-
-它們分別保存：
-
-- connector config
-- offsets
-- connector/task status
-
----
-
-# 對應到 Demo
-
-我們的 E2E 會檢查：
+Distributed mode 的 Kafka Connect 會使用 internal topics：
 
 ```text
 connect-configs-hot-product-demo
@@ -551,97 +582,27 @@ connect-offsets-hot-product-demo
 connect-status-hot-product-demo
 ```
 
-這代表 Kafka Connect distributed mode 不只依賴單一 worker 的本機狀態。
+用途：
 
-它把重要狀態放進 Kafka。
+- connector config
+- offsets
+- connector / task status
 
----
+這表示 Kafka Connect 不是只靠 worker 本機狀態。
 
-# 設計問題 8
-
-## 壞資料怎麼辦？
-
-現實世界一定會有壞資料。
-
-例如：
-
-```json
-{"event_id":"bad_1",
-```
-
-這是一筆壞掉的 JSON。
-
-設計問題：
-
-```text
-整條 pipeline 是否要停止？
-或是先保存壞資料，讓主流程繼續處理？
-```
+重要狀態會放回 Kafka。
 
 ---
 
-# Dead Letter Queue（DLQ）
+# Component 8：Delivery Semantics
 
-DLQ 是 sink pipeline 的問題資料暫存區。
+報告時要避免過度承諾。
 
-```text
-可處理資料 -> Elasticsearch
-無法處理資料 -> product.events.dlq
-```
-
-我們 demo 設定：
+不要說：
 
 ```text
-errors.tolerance=all
-errors.deadletterqueue.topic.name=product.events.dlq
+這條 pipeline 一定 exactly-once。
 ```
-
----
-
-# 為什麼 DLQ 有用
-
-沒有 DLQ：
-
-```text
-一筆壞資料可能讓 task 進入 FAILED 狀態
-```
-
-有 DLQ：
-
-```text
-主流程可以繼續處理其他 records
-壞資料被保存到 DLQ topic
-後續可由人工或另一個 consumer / connector 補處理
-```
-
-代價：
-
-```text
-DLQ 不代表資料問題消失。
-DLQ topic 仍需要監控與補償流程。
-```
-
----
-
-# 設計問題 9
-
-## 送資料的保證是什麼？
-
-第四章提到三種語意：
-
-- at-most-once
-- at-least-once
-- exactly-once
-
-報告時需要避免過度承諾：
-
-```text
-不要把所有 pipeline 都描述成 exactly-once。
-```
-
----
-
-# Demo 的語意保證
 
 這個 demo 的精確說法：
 
@@ -649,13 +610,7 @@ DLQ topic 仍需要監控與補償流程。
 Elasticsearch sink 以 at-least-once 方式理解。
 ```
 
-可能發生：
-
-```text
-同一筆資料被重送
-```
-
-我們降低影響的方法：
+降低重送影響的方法：
 
 ```text
 Kafka record key = event_id
@@ -663,131 +618,94 @@ Elasticsearch document id = key
 write.method = upsert
 ```
 
-這是 practical idempotency：透過穩定 document id 降低重送造成的重複寫入影響，但不等同於跨系統通用的 exactly-once。
+這是 practical idempotency，不等於跨系統通用 exactly-once。
+
+---
+layout: section
+---
+
+# 回到整體架構
 
 ---
 
-# Demo 觀察重點
-
-現在看 Kibana dashboard。
-
-觀察：
-
-- Total events
-- Event volume by type
-- Business outcomes
-- Failure reasons
-- High-frequency users
-
-用一句話解釋：
+# 為什麼這樣設計？
 
 ```text
-我們不是只看到資料有來，而是看到事件趨勢和失敗原因。
+Application
+  產生業務事件
+
+Kafka
+  接住事件流，提供 buffer 與 replay
+
+Kafka Connect
+  標準化地把 Kafka records 寫到外部系統
+
+Elasticsearch
+  提供 event search 與 aggregation
+
+Kibana
+  讓人看到趨勢與問題
 ```
 
----
+這不是為了把架構變複雜。
 
-# AI 驅動 Load Generator 的設計
-
-為了讓 dashboard 更像真實世界，我們做了 profile-driven load generator。
-
-AI 不負責逐筆產生 event。
-
-AI 負責生成「流量劇本」：
-
-```text
-teaser -> waiting-room -> drop-open -> sold-out-pressure
-```
-
-Java generator 負責依照 profile 穩定、可重跑地產生事件。
+而是為了把不同責任拆開。
 
 ---
 
-# 限量折價券 Profile
+# 學生應該記住什麼？
 
-```text
-24,000 events
-80 minutes
-1,200 coupons
-many users refresh pages
-claims succeed until inventory is zero
-sold-out failures spike later
-```
+Kafka Connect 不是神奇黑盒。
 
-這讓 dashboard 不是 200 筆假資料，而是有趨勢、有壓力、有失敗原因的資料。
+它是一套標準化資料整合框架。
 
----
-
-# 回饋迴圈
-
-我們不只依賴目測判斷資料是否合理。
-
-`score-load-profile.sh` 會查 Elasticsearch：
-
-- 總資料量是否足夠
-- 後段流量是否明顯高於前段
-- refresh / waiting room 是否存在
-- coupon inventory 是否已經歸零
-- sold-out failure 是否主導後段
-- user 分布是否合理
-- SMT 產生的 `metadata_region` 與 `pipeline` 欄位是否存在
-
----
-
-# 學生應該記住什麼
-
-Kafka Connect 不是無條件保證正確性的黑盒。
-
-它是一套標準化資料搬運框架。
-
-要設計好 pipeline，需要回答：
+設計 pipeline 時要回答：
 
 - 選哪個 connector？
 - 資料方向是 source 還是 sink？
-- 資料模型長什麼樣？
-- transformation 放哪裡？
-- task 和 partition 怎麼搭配？
-- 壞資料怎麼處理？
-- 出事怎麼看？
-- 語意保證是什麼？
+- event model 是否支援 dashboard 問題？
+- SMT 只做輕量轉換嗎？
+- tasks 與 partitions 是否合理？
+- 壞資料去哪裡？
+- 出事時如何觀察？
+- 語意保證是否說得精確？
 
 ---
 
-# 整體觀念
+# 一句話總結
 
 ```text
-Good pipeline design
-    = correct connector
-    + clear data model
-    + appropriate parallelism
-    + explicit failure handling
-    + honest processing semantics
-    + observable results
+熱門商品爆量時，
+交易系統不應直接承擔搜尋與觀測壓力。
+
+Kafka 先接住事件，
+Kafka Connect 負責把事件穩定送到 Elasticsearch，
+Kibana 讓我們即時觀察趨勢。
 ```
 
-這就是 Kafka Connect 第四章的核心。
+這就是本 demo 要呈現的資料管線設計。
 
 ---
 
-# 結尾
+# 附錄：可重跑與驗證
 
-如果只記一句話：
+Demo seed scripts 預設會清理：
+
+- connector
+- Kafka data topics
+- Kafka Connect internal topics
+- Elasticsearch index
+
+並使用固定時間：
 
 ```text
-Kafka Connect 不只是把資料搬過去；
-它要求你設計一條可觀察、可維護、可恢復的資料管線。
+BASE_TIME=2026-05-01T12:00:00Z
 ```
 
-Demo:
+因此每次 demo 都能得到一致的 dashboard 結果。
+
+E2E 驗證：
 
 ```bash
-./scripts/seed-ai-load-profile.sh
-```
-
-這個腳本會先清除 connector、topics、Connect internal topics 與 Elasticsearch index，並使用固定 base time 重新產生資料，因此每次 demo 的統計結果一致。
-
-Dashboard:
-
-```text
-http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
+./scripts/e2e.sh
 ```
