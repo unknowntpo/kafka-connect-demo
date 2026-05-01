@@ -49,7 +49,7 @@ layout: section
 
 ---
 
-# 觀測目標不是單筆訂單
+# 觀測目標超過單筆訂單
 
 交易系統通常關心：
 
@@ -67,7 +67,7 @@ layout: section
 這類問題更接近：
 
 ```text
-event search + time-series aggregation + dashboard
+事件搜尋 + 時間序列統計 + dashboard
 ```
 
 ---
@@ -152,11 +152,41 @@ Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
 layout: section
 ---
 
-# 為什麼不能只靠 Database？
+# 下一個問題：資料要放在哪裡？
 
 ---
 
-# Database 適合交易，不適合承擔所有觀測查詢
+# 從事件欄位走到資料架構
+
+到這裡，我們只完成第一步：
+
+```text
+知道要觀察什麼
+知道 event 應該長什麼樣子
+```
+
+但還沒有回答第二步：
+
+```text
+這些 event 要寫到哪裡？
+誰負責讓 dashboard 查得到？
+```
+
+接下來進入架構選擇。
+
+先把候選方案列出來，再檢查每個方案能承擔哪些責任：
+
+- 直接查交易 Database
+- Application 直接寫搜尋系統
+- 透過 Kafka 與 Kafka Connect 建立資料管線
+
+---
+
+# 第一個直覺做法：直接查 Database
+
+---
+
+# Database 適合交易；觀測查詢需要另外評估
 
 Database 適合保存正式交易狀態：
 
@@ -168,20 +198,20 @@ Database 適合保存正式交易狀態：
 如果 dashboard 直接查詢交易 DB，熱門商品爆量時會有下列風險：
 
 - 大量查詢可能影響交易系統。
-- event-style 查詢通常不是交易 DB 的主要設計目標。
+- event-style 查詢和交易 DB 的主要設計目標不同。
 - 每分鐘聚合、失敗原因統計、地區流量分析會和交易 workload 混在一起。
 - 歷史事件查詢與稽核資料可能讓主資料庫膨脹。
 
-精確說法：
+設計判斷：
 
 ```text
-不是 Database 不能存資料，
-而是不應讓交易 DB 同時承擔所有近即時觀測壓力。
+交易 DB 保存正式狀態。
+近即時觀測查詢需要獨立評估查詢負載、資料量與查詢型態。
 ```
 
 ---
 
-# 為什麼也不是 Application 直接寫 Elasticsearch？
+# 第二個直覺做法：Application 直接寫 Elasticsearch
 
 Elasticsearch 適合搜尋、聚合與 dashboard。
 
@@ -204,12 +234,11 @@ application 需要自己處理：
 - 重送造成的重複寫入
 - 寫入狀態與監控
 
-問題不在於 Elasticsearch 不能 indexing。
-
-限制在於：
+設計限制：
 
 ```text
-業務 application 不應直接承擔整條資料同步管線的責任。
+業務 application 同步承擔資料同步管線後，
+請求路徑會受到外部系統 latency、retry 與錯誤處理影響。
 ```
 
 ---
@@ -243,7 +272,7 @@ layout: section
 
 # Kafka 的第一個角色：承接事件流
 
-Kafka 在這個 demo 中不是 dashboard，也不是資料庫。
+Kafka 在這個 demo 中扮演事件流入口。
 
 先把它理解成事件流的入口：
 
@@ -348,7 +377,7 @@ Kafka Connect
 Elasticsearch index: product-events
 ```
 
-我們不是自己寫一支 Java consumer 來同步 Elasticsearch。
+此處選擇 Kafka Connect 來同步 Elasticsearch。
 
 先用一句話理解：
 
@@ -377,7 +406,7 @@ Elasticsearch index: product-events
 Kibana Dashboard
 ```
 
-這條管線的目標不是只證明「有資料」。
+這條管線的目標超過「有資料」。
 
 重點是：
 
@@ -395,7 +424,7 @@ layout: section
 
 # Demo 要讓學生看到什麼？
 
-Demo 不只展示指令能否執行。
+Demo 除了展示指令能否執行，也要呈現資料流動後的觀測結果。
 
 我們要讓學生在 dashboard 上看到：
 
@@ -448,7 +477,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 
 因此，這個 demo 能穩定呈現 Kafka Connect pipeline 與 dashboard 結果。
 
-它不是依照當下 wall-clock time 持續推進的動畫式流量模擬。
+它採用固定時間窗，重點是可重跑與結果一致。
 
 ---
 
@@ -465,7 +494,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 | 高頻操作線索 | 觀察重複刷新或搶購失敗是否集中於少數使用者 |
 | 地區流量 | 比較不同地區的壓力分布 |
 
-`關鍵行為統計` 是依條件分組後的事件數，不是完整轉換率。資料管線是否健康，需要搭配系統狀態與端到端檢查判斷。
+`關鍵行為統計` 是依條件分組後的事件數；完整轉換率需要額外定義漏斗分母與分子。資料管線是否健康，需要搭配系統狀態與端到端檢查判斷。
 
 ---
 layout: section
@@ -491,13 +520,15 @@ event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 
 # 第四章的核心問題
 
-第四章不是只問：
+# 第四章的核心問題
+
+第四章先從一個基本問題開始：
 
 ```text
 這條資料管線跑不跑得起來？
 ```
 
-而是問：
+接著把問題展開成幾個工程面向：
 
 - 這條 pipeline 是否容易維護？
 - 發生故障時是否能觀察與定位？
@@ -739,7 +770,7 @@ connect-status-hot-product-demo
 - offsets topic：保存資料讀到哪裡
 - status topic：保存 connector / task 狀態
 
-這表示 Kafka Connect 不是只靠 worker 本機狀態。
+這表示 Kafka Connect 的重要狀態會保存到 Kafka。
 
 重要狀態會放回 Kafka。
 
@@ -827,17 +858,15 @@ Kibana
   讓人看到趨勢與問題
 ```
 
-這個設計不是為了增加架構複雜度。
-
-其目的在於分離不同系統責任。
+這個設計的目的，是分離不同系統責任。
 
 ---
 
 # 本章重點
 
-Kafka Connect 不是能自動解決所有問題的黑盒。
+Kafka Connect 是標準化資料整合框架。
 
-它是一套標準化資料整合框架。
+它提供 connector、task、converter、SMT、DLQ 與 internal topics 等機制。
 
 設計 pipeline 時要回答：
 
