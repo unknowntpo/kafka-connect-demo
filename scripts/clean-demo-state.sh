@@ -35,6 +35,12 @@ wait_for_elasticsearch() {
   return 1
 }
 
+clear_elasticsearch_readonly_blocks() {
+  curl -fsS -X PUT "http://localhost:9200/_all/_settings" \
+    -H "Content-Type: application/json" \
+    -d '{"index.blocks.read_only_allow_delete": null}' >/dev/null 2>&1 || true
+}
+
 topic_exists() {
   local topic="$1"
   docker compose exec -T broker kafka-topics \
@@ -60,6 +66,7 @@ cd "$ROOT_DIR"
 docker compose up -d broker elasticsearch >/dev/null
 wait_for_broker
 wait_for_elasticsearch
+clear_elasticsearch_readonly_blocks
 
 curl -fsS -X DELETE "http://localhost:8083/connectors/$CONNECTOR_NAME" >/dev/null 2>&1 || true
 docker compose stop connect >/dev/null 2>&1 || true

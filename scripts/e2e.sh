@@ -33,14 +33,15 @@ wait_for_connector_running() {
   local connector="$1"
   local attempt
   for attempt in $(seq 1 60); do
-    local state
-    state="$(curl -fsS "http://localhost:8083/connectors/$connector/status" 2>/dev/null | jq -r '.connector.state + ":" + .tasks[0].state' 2>/dev/null || true)"
-    if [[ "$state" == "RUNNING:RUNNING" ]]; then
+    local all_running
+    all_running="$(curl -fsS "http://localhost:8083/connectors/$connector/status" 2>/dev/null \
+      | jq -r '(.connector.state == "RUNNING") and ((.tasks | length) > 0) and all(.tasks[]; .state == "RUNNING")' 2>/dev/null || true)"
+    if [[ "$all_running" == "true" ]]; then
       return 0
     fi
     sleep 2
   done
-  echo "Timed out waiting for connector $connector to reach RUNNING" >&2
+  echo "Timed out waiting for connector $connector and all tasks to reach RUNNING" >&2
   return 1
 }
 

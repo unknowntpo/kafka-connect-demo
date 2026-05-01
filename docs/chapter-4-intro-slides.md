@@ -28,7 +28,7 @@ layout: section
 
 ---
 
-# 電商平台想知道什麼？
+# 電商平台需要追蹤什麼？
 
 假設今晚 8 點有一個商品突然爆紅。
 
@@ -39,17 +39,17 @@ layout: section
 - 購買或領券成功率是否下降？
 - 失敗原因是售罄、限流，還是付款失敗？
 - 哪些地區壓力最大？
-- 是否有少數使用者造成異常高頻操作？
+- 是否有少數使用者出現高頻操作線索？
 
 核心問題：
 
 ```text
-熱門商品的各種情況，要怎麼被即時追蹤與觀察？
+熱門商品的各種情況，要如何被近即時追蹤與觀察？
 ```
 
 ---
 
-# 我們要觀察的不是一筆訂單
+# 觀測目標不是單筆訂單
 
 交易系統通常關心：
 
@@ -57,7 +57,7 @@ layout: section
 - 庫存是否扣除
 - 付款是否成功
 
-但熱門商品觀測還需要看事件流：
+熱門商品觀測則需要分析事件流：
 
 - 每分鐘有多少瀏覽？
 - 點擊量是否突然上升？
@@ -94,7 +94,7 @@ layout: section
 業務問題 -> 指標 -> 事件模型 -> 資料管線 -> Dashboard
 ```
 
-不是先做 pipeline，再回頭猜要看什麼。
+此順序能避免先建立 pipeline，再回頭推測 dashboard 應呈現哪些資料。
 
 ---
 
@@ -104,11 +104,11 @@ layout: section
 
 | 指標 | 問題 |
 | --- | --- |
-| 事件總數 | Kafka Connect 是否持續把事件寫入 Elasticsearch？ |
+| 事件總數 | 事件是否已被索引到 Elasticsearch？ |
 | 事件類型趨勢 | 流量是在瀏覽、刷新、點擊、成功，還是失敗？ |
-| 成功 / 失敗 / 需求壓力 | 使用者需求是否高於系統或庫存可承受範圍？ |
+| 關鍵行為統計 | 成功、失敗與需求壓力事件各自累積多少？ |
 | 失敗原因 | 是售罄、限流，還是付款失敗？ |
-| 高頻操作使用者 | 是否有重複刷新、搶購失敗或疑似 bot 行為？ |
+| 高頻操作線索 | 重複刷新或搶購失敗是否集中於少數使用者？ |
 | 地區流量 | 哪些地區的壓力最高？ |
 
 ---
@@ -127,7 +127,7 @@ failure_reason
 metadata.region
 ```
 
-這就是為什麼 event model 不是隨便設計的。
+因此，event model 不應任意設計。
 
 Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
 
@@ -141,14 +141,14 @@ layout: section
 
 # Database 適合交易，不適合承擔所有觀測查詢
 
-Database 很適合保存正式狀態：
+Database 適合保存正式交易狀態：
 
 - 訂單
 - 付款
 - 庫存
 - 使用者資料
 
-但如果 dashboard 直接查交易 DB，熱門商品爆量時會有風險：
+如果 dashboard 直接查詢交易 DB，熱門商品爆量時會有下列風險：
 
 - 大量查詢可能影響交易系統。
 - event-style 查詢通常不是交易 DB 的主要設計目標。
@@ -159,7 +159,7 @@ Database 很適合保存正式狀態：
 
 ```text
 不是 Database 不能存資料，
-而是不應讓交易 DB 同時承擔所有即時觀測壓力。
+而是不應讓交易 DB 同時承擔所有近即時觀測壓力。
 ```
 
 ---
@@ -189,7 +189,7 @@ application 需要自己處理：
 
 問題不在於 Elasticsearch 不能 indexing。
 
-問題是：
+限制在於：
 
 ```text
 業務 application 不應直接承擔整條資料同步管線的責任。
@@ -199,7 +199,7 @@ application 需要自己處理：
 
 # 需要一個中間層
 
-我們希望 application 做最少的事情：
+application 層只應承擔必要責任：
 
 ```text
 產生事件 -> 寫入 Kafka
@@ -207,7 +207,7 @@ application 需要自己處理：
 
 後面的搜尋、觀測、dashboard 寫入，交給資料管線處理。
 
-這樣可以把責任切開：
+責任可拆分為：
 
 - Application：處理使用者請求與業務邏輯。
 - Kafka：接住事件流，提供緩衝與重放能力。
@@ -223,22 +223,22 @@ layout: section
 
 ---
 
-# Kafka 的角色：先把事件穩定接住
+# Kafka 的角色：先承接事件流
 
 Kafka 在這個 demo 中不是 dashboard，也不是資料庫。
 
 它的角色是事件緩衝層：
 
 - decoupling：application 不需要知道後面有哪些 consumer。
-- buffering：Elasticsearch 慢一點時，事件仍先留在 Kafka。
+- buffering：Elasticsearch indexing 延遲升高時，事件仍可先保留在 Kafka。
 - replay：需要重建 index 或重新消費時，可以從 topic 讀回來。
 - partitioning：事件可以分散到多個 partition，提高消費平行度。
 - durability：事件不只存在 application memory。
 
-一句話：
+可整理為：
 
 ```text
-Kafka 讓事件先被可靠接住，再交給後面的系統慢慢處理。
+Kafka 先保存事件，再由後續系統依各自速度消費。
 ```
 
 ---
@@ -251,19 +251,26 @@ Kafka 讓事件先被可靠接住，再交給後面的系統慢慢處理。
 product.events
 ```
 
-裡面包含熱門商品與限量折價券事件：
+demo 支援兩組事件。
+
+基本熱門商品事件：
 
 - `PRODUCT_VIEWED`
 - `BUY_CLICKED`
 - `PURCHASE_SUCCEEDED`
 - `PURCHASE_FAILED`
+
+限量折價券 profile 事件：
+
+- `COUPON_VIEWED`
 - `PAGE_REFRESHED`
+- `WAITING_ROOM_JOINED`
 - `COUPON_CLAIM_SUCCEEDED`
 - `COUPON_CLAIM_FAILED`
 
-Kafka 只負責承接與保存事件流。
+目前講座 demo 主要使用限量折價券 profile，因為它能清楚呈現刷新、排隊、售罄與失敗原因。
 
-它不負責產生 dashboard，也不負責把資料寫進 Elasticsearch。
+Kafka 只負責承接與保存事件流，不負責產生 dashboard，也不負責把資料寫入 Elasticsearch。
 
 ---
 layout: section
@@ -321,7 +328,7 @@ Elasticsearch index: product-events
 Kibana Dashboard
 ```
 
-這條管線的重點不是「有資料」。
+這條管線的目標不是只證明「有資料」。
 
 重點是：
 
@@ -333,13 +340,13 @@ Kibana Dashboard
 layout: section
 ---
 
-# Demo：即時流量進 Dashboard
+# Demo：可重播的近即時觀測
 
 ---
 
 # Demo 要讓學生看到什麼？
 
-Demo 不只是跑指令。
+Demo 不只展示指令能否執行。
 
 我們要讓學生在 dashboard 上看到：
 
@@ -347,7 +354,7 @@ Demo 不只是跑指令。
 - 事件類型隨時間變化。
 - 成功與失敗比例改變。
 - 售罄或限流造成失敗原因集中。
-- 高頻操作使用者浮現。
+- 高頻操作線索浮現。
 - 不同地區有不同流量壓力。
 
 這些 panel 對應到一個真實問題：
@@ -364,18 +371,13 @@ Demo 不只是跑指令。
 啟動 stack：
 
 ```bash
-./scripts/start.sh
-./scripts/wait-for-connect.sh
-./scripts/create-topics.sh
-./scripts/create-search-resources.sh
-./scripts/register-connectors.sh
-./scripts/create-kibana-dashboard.sh
+just setup
 ```
 
-產生可重跑的 AI profile-driven 流量：
+產生可重跑的 profile-driven 流量。此流程使用固定時間窗產生資料，因此每次執行會得到一致結果：
 
 ```bash
-./scripts/seed-ai-load-profile.sh
+just replay-demo
 ```
 
 Dashboard：
@@ -386,18 +388,35 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 
 ---
 
+# Demo 模式說明
+
+本 demo 採用可重播模式：
+
+- 每次先清理 connector、topics、Connect internal topics 與 Elasticsearch index。
+- 使用固定 `BASE_TIME=2026-05-01T12:00:00Z`。
+- 重新產生 24,000 筆折價券搶購事件。
+- Dashboard time range 會對齊固定事件時間窗。
+
+因此，這個 demo 能穩定呈現 Kafka Connect pipeline 與 dashboard 結果。
+
+它不是依照當下 wall-clock time 持續推進的動畫式流量模擬。
+
+---
+
 # Dashboard Panel Review
 
 目前 dashboard 觀察項目：
 
 | Panel | 目的 |
 | --- | --- |
-| 事件總數 | 確認 Kafka Connect 已將事件寫入 Elasticsearch |
+| 事件總數 | 確認事件已被索引到 Elasticsearch |
 | 事件類型趨勢 | 看瀏覽、刷新、成功、失敗如何隨時間變化 |
-| 業務結果 | 看成功、失敗、需求壓力的整體比例 |
+| 關鍵行為統計 | 看成功、失敗、需求壓力事件的累積數量 |
 | 失敗原因 | 看售罄、限流、付款失敗是否集中 |
-| 高頻操作使用者 | 找出重複刷新、搶購失敗或疑似 bot 行為 |
+| 高頻操作線索 | 觀察重複刷新或搶購失敗是否集中於少數使用者 |
 | 地區流量 | 比較不同地區的壓力分布 |
+
+`關鍵行為統計` 是 filter count，不是完整 conversion rate。pipeline health 需要搭配 Kafka Connect status API 與 E2E 檢查判斷。
 
 ---
 layout: section
@@ -449,7 +468,7 @@ Kafka -> Elasticsearch
 
 # Component 2：Event Model
 
-Dashboard 想回答什麼，event 就要包含對應欄位。
+Dashboard 要回答什麼問題，event 就必須包含對應欄位。
 
 範例：
 
@@ -467,7 +486,7 @@ Dashboard 想回答什麼，event 就要包含對應欄位。
 }
 ```
 
-沒有明確 event model，dashboard 只能看到模糊訊息。
+沒有明確 event model，dashboard 只能呈現模糊訊息。
 
 ---
 
@@ -485,7 +504,7 @@ Kafka bytes
 ConnectRecord
 ```
 
-這個 demo 使用 schemaless JSON。
+此 demo 使用 schemaless JSON。
 
 教學取捨：
 
@@ -546,7 +565,7 @@ Elasticsearch sink: tasks.max=2
 
 # Component 6：DLQ
 
-現實世界一定會有壞資料。
+實務資料管線需要處理壞資料。
 
 例如 malformed JSON：
 
@@ -568,7 +587,9 @@ errors.tolerance=all
 errors.deadletterqueue.topic.name=product.events.dlq
 ```
 
-DLQ 不代表資料問題消失；它代表問題資料被隔離，後續仍要監控與補償。
+此 demo 驗證的是解析或轉換階段的壞資料會進入 DLQ。
+
+DLQ 不代表資料問題消失；它代表問題資料被隔離，後續仍要監控與補償。外部系統故障、mapping conflict 或長時間 backpressure 仍需搭配 retry、監控與告警處理。
 
 ---
 
@@ -596,9 +617,9 @@ connect-status-hot-product-demo
 
 # Component 8：Delivery Semantics
 
-報告時要避免過度承諾。
+跨系統資料管線需要明確說明 delivery semantics。
 
-不要說：
+此 demo 不宣稱：
 
 ```text
 這條 pipeline 一定 exactly-once。
@@ -647,15 +668,15 @@ Kibana
   讓人看到趨勢與問題
 ```
 
-這不是為了把架構變複雜。
+這個設計不是為了增加架構複雜度。
 
-而是為了把不同責任拆開。
+其目的在於分離不同系統責任。
 
 ---
 
-# 學生應該記住什麼？
+# 本章重點
 
-Kafka Connect 不是神奇黑盒。
+Kafka Connect 不是能自動解決所有問題的黑盒。
 
 它是一套標準化資料整合框架。
 
@@ -680,7 +701,7 @@ Kafka Connect 不是神奇黑盒。
 
 Kafka 先接住事件，
 Kafka Connect 負責把事件穩定送到 Elasticsearch，
-Kibana 讓我們即時觀察趨勢。
+Kibana 讓團隊近即時觀察趨勢。
 ```
 
 這就是本 demo 要呈現的資料管線設計。
@@ -707,5 +728,5 @@ BASE_TIME=2026-05-01T12:00:00Z
 E2E 驗證：
 
 ```bash
-./scripts/e2e.sh
+just e2e
 ```

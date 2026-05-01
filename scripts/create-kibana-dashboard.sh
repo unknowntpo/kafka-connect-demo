@@ -12,7 +12,7 @@ wait_for_kibana() {
   for attempt in $(seq 1 60); do
     local state
     state="$(curl -fsS "$KIBANA_URL/api/status" 2>/dev/null | jq -r '.status.overall.state // .status.overall.level // empty' || true)"
-    if [[ "$state" == "green" || "$state" == "available" ]]; then
+    if [[ "$state" == "green" || "$state" == "yellow" || "$state" == "available" || "$state" == "degraded" ]]; then
       return 0
     fi
     sleep 2
@@ -26,6 +26,9 @@ put_saved_object() {
   local id="$2"
   local body_file="$3"
   curl -fsS \
+    --retry 10 \
+    --retry-delay 2 \
+    --retry-all-errors \
     -X POST "$KIBANA_URL/api/saved_objects/$type/$id?overwrite=true" \
     -H "Content-Type: application/json" \
     -H "kbn-xsrf: kafka-connect-demo" \
@@ -109,10 +112,10 @@ create_purchase_outcome_table() {
   cat >"$body" <<'JSON'
 {
   "attributes": {
-    "title": "熱門商品 - 業務結果",
-    "visState": "{\"title\":\"熱門商品 - 業務結果\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"filters\",\"schema\":\"bucket\",\"params\":{\"filters\":[{\"input\":{\"query\":\"event_type: (PURCHASE_SUCCEEDED or COUPON_CLAIM_SUCCEEDED)\",\"language\":\"kuery\"},\"label\":\"成功\"},{\"input\":{\"query\":\"event_type: (PURCHASE_FAILED or COUPON_CLAIM_FAILED)\",\"language\":\"kuery\"},\"label\":\"失敗\"},{\"input\":{\"query\":\"event_type: (BUY_CLICKED or PAGE_REFRESHED)\",\"language\":\"kuery\"},\"label\":\"需求壓力\"}]}}]}",
+    "title": "熱門商品 - 關鍵行為統計",
+    "visState": "{\"title\":\"熱門商品 - 關鍵行為統計\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"filters\",\"schema\":\"bucket\",\"params\":{\"filters\":[{\"input\":{\"query\":\"event_type: (PURCHASE_SUCCEEDED or COUPON_CLAIM_SUCCEEDED)\",\"language\":\"kuery\"},\"label\":\"成功\"},{\"input\":{\"query\":\"event_type: (PURCHASE_FAILED or COUPON_CLAIM_FAILED)\",\"language\":\"kuery\"},\"label\":\"失敗\"},{\"input\":{\"query\":\"event_type: (BUY_CLICKED or PAGE_REFRESHED)\",\"language\":\"kuery\"},\"label\":\"需求壓力\"}]}}]}",
     "uiStateJSON": "{}",
-    "description": "商品或折價券流程中的成功、失敗與需求壓力統計。",
+    "description": "商品或折價券流程中的成功、失敗與需求壓力事件統計；此 panel 是 filter count，不代表完整轉換率。",
     "version": 1,
     "kibanaSavedObjectMeta": {
       "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
@@ -165,10 +168,10 @@ create_active_users_table() {
   cat >"$body" <<'JSON'
 {
   "attributes": {
-    "title": "熱門商品 - 高頻操作使用者",
-    "visState": "{\"title\":\"熱門商品 - 高頻操作使用者\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"user_id\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":10,\"otherBucket\":false,\"missingBucket\":false}}]}",
+    "title": "熱門商品 - 高頻操作線索",
+    "visState": "{\"title\":\"熱門商品 - 高頻操作線索\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"user_id\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":10,\"otherBucket\":false,\"missingBucket\":false}}]}",
     "uiStateJSON": "{}",
-    "description": "依需求壓力事件排序的高頻操作使用者，用來觀察重複刷新、搶購失敗或疑似 bot 行為。",
+    "description": "依需求壓力事件排序的使用者線索，用來觀察重複刷新或搶購失敗是否集中於少數使用者。",
     "version": 1,
     "kibanaSavedObjectMeta": {
       "searchSourceJSON": "{\"query\":{\"query\":\"event_type: (PAGE_REFRESHED or BUY_CLICKED or COUPON_CLAIM_FAILED or PURCHASE_FAILED)\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"

@@ -136,15 +136,15 @@ Dashboard 應該呈現下列趨勢：
 
 - Metric：已索引事件總數。
 - Line chart：依 `event_type` 切分的事件量趨勢。
-- Table：business outcomes，例如點擊、成功、失敗。
+- Table：關鍵行為統計，例如成功、失敗與需求壓力。這是 filter count，不代表完整轉換率。
 - Table：`failure_reason`，用來觀察售罄或限流。
-- Table：依 `user_id` 統計的高頻操作使用者，只看刷新、點擊與失敗等需求壓力事件。
+- Table：依 `user_id` 統計的高頻操作線索，只看刷新、點擊與失敗等需求壓力事件。
 - Table：依 `metadata_region` 統計的地區流量。`metadata_region` 由 Kafka Connect `Flatten` SMT 從巢狀 `metadata.region` 展平而來。
 
 建立 dashboard：
 
 ```bash
-./scripts/create-kibana-dashboard.sh
+just dashboard
 ```
 
 Dashboard URL：
@@ -152,6 +152,14 @@ Dashboard URL：
 ```text
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
+
+正式展示前建議使用單一重播入口：
+
+```bash
+just replay-demo
+```
+
+這個腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並以固定時間窗產生相同資料集。
 
 ## 事件模型
 
@@ -248,19 +256,19 @@ sold_out:
 CLI 範例：
 
 ```bash
-./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=30 --duration-seconds=20 --initial-stock=80 --seed=42"
+just run-basic
 ```
 
-如果本機 Kibana 或 Elasticsearch 回傳 HTTP 429，可以降低 event rate：
+如果本機 Kibana 或 Elasticsearch 回傳 HTTP 429，通常代表本機資源或 Docker disk 壓力過高。正式展示建議先執行：
 
 ```bash
-./scripts/run-gradle.sh --no-daemon run --args="generate --rate-per-second=10 --duration-seconds=20 --initial-stock=80 --seed=42"
+just replay-demo
 ```
 
 產生較大的 dashboard 資料集：
 
 ```bash
-./scripts/seed-dashboard-data.sh
+just seed-dashboard
 ```
 
 預設會產生 `14,400` 筆事件，並讓時間戳越接近後段越密集，使 dashboard 呈現商品爆紅的趨勢。
@@ -326,7 +334,7 @@ Elasticsearch document
 
 ## E2E 驗證條件
 
-`./scripts/e2e.sh` 會驗證：
+`just e2e` 會驗證：
 
 - Kafka、Connect、Elasticsearch、Kibana 啟動。
 - Elasticsearch sink connector plug-in 可被發現。
@@ -345,7 +353,7 @@ Elasticsearch document
 demo seed scripts 預設會呼叫：
 
 ```bash
-./scripts/clean-demo-state.sh
+just clean
 ```
 
 cleanup 會移除：

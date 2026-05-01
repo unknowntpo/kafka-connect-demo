@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+FORCE_RECREATE_INDEX="${FORCE_RECREATE_INDEX:-0}"
+
 if curl -fsS -I "http://localhost:9200/product-events" >/dev/null 2>&1; then
-  exit 0
+  if [[ "$FORCE_RECREATE_INDEX" == "1" ]]; then
+    curl -fsS -X DELETE "http://localhost:9200/product-events" >/dev/null
+  else
+    exit 0
+  fi
 fi
 
 curl -fsS -X PUT "http://localhost:9200/product-events" \
