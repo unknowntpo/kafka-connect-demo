@@ -3,3 +3,5 @@ app/target/
 app/.gradle/
 .gradle-cache/
 .DS_Store
+node_modules/
+docs/dist/

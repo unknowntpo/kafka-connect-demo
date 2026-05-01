@@ -68,10 +68,22 @@ Slidev 投影片在 [docs/chapter-4-intro-slides.md](/Users/unknowntpo/repo/unkn
 問題場景 -> 追蹤指標 -> Database / Elasticsearch 取捨 -> Kafka -> Kafka Connect -> Demo -> 第四章 component breakdown
 ```
 
-如果本機已安裝 Slidev，可以用下列方式播放：
+安裝 Slidev 依賴：
 
 ```bash
-npx slidev docs/chapter-4-intro-slides.md
+npm install
+```
+
+播放投影片：
+
+```bash
+npm run slides
+```
+
+驗證投影片可以 build：
+
+```bash
+npm run slides:build
 ```
 
 ## 快速開始

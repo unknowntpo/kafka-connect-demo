@@ -1,0 +1,13 @@
+{
+  "name": "kafka-connect-demo-slides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "slides": "slidev docs/chapter-4-intro-slides.md",
+    "slides:build": "slidev build docs/chapter-4-intro-slides.md"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^52.2.0",
+    "@slidev/theme-default": "^0.25.0"
+  }
+}
