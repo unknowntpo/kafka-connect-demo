@@ -153,6 +153,14 @@ Dashboard URL：
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
+Dashboard 定義採用 Kibana Saved Objects NDJSON：
+
+```text
+dashboards/hot-product-sales-observability.ndjson
+```
+
+這個檔案類似 Grafana dashboard JSON 的角色：dashboard、visualizations、data view 與 references 都可以進入版本控管。`just dashboard` 會匯入這份 NDJSON 並覆蓋同名 saved objects。
+
 正式展示前建議使用單一重播入口：
 
 ```bash

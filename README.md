@@ -58,6 +58,24 @@ Chapter 4 相關概念：
 - Elasticsearch: `http://localhost:9200`
 - Kibana: `http://localhost:5601`
 
+## Dashboard As Code
+
+Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson](/Users/unknowntpo/repo/unknowntpo/kafka-connect-demo/dashboards/hot-product-sales-observability.ndjson)。
+
+這個檔案是 Kibana Saved Objects NDJSON，包含：
+
+- data view：`product-events`
+- 6 個 visualization panels
+- dashboard layout 與 references
+
+建立或覆蓋 dashboard：
+
+```bash
+just dashboard
+```
+
+`just replay-demo` 也會自動匯入這份 dashboard 定義，並把 dashboard time range 設定到固定 demo 時間窗。
+
 ## 投影片
 
 Slidev 投影片在 [docs/chapter-4-intro-slides.md](/Users/unknowntpo/repo/unknowntpo/kafka-connect-demo/docs/chapter-4-intro-slides.md)。
