@@ -20,6 +20,14 @@ Kibana dashboard / search UI
 
 故事刻意設計得容易理解：許多使用者瀏覽商品、點擊購買或搶折價券；部分操作成功，庫存逐漸下降；售罄後失敗事件上升。學生可以直接在 Kibana 上看到資料流動與事件趨勢。
 
+## 給 Mentor 的設計說明
+
+這個 demo 的教學方式是「先看見結果，再回到管線設計」。學生先在 Kibana dashboard 看到熱門商品或限量折價券的流量變化、成功與失敗、售罄原因，再回頭拆解事件如何經過 Kafka、Kafka Connect、SMT、DLQ，最後寫入 Elasticsearch。
+
+Kafka Connect 在這裡不是為了取代一個很短的 Java consumer，而是用來示範實務資料管線的責任邊界：應用程式負責產生業務事件，Kafka 負責承接事件流，Kafka Connect 負責把 Kafka records 穩定寫到外部系統，並提供 connector lifecycle、task 狀態、converter、SMT、DLQ 與 restart 行為。這些是第三章與第四章要討論的核心。
+
+Elasticsearch 的選擇是因為本 demo 的目標是搜尋與觀測，而不是交易系統或長期資料倉儲。它能直接接收 JSON 事件、依時間與欄位查詢、做聚合，並透過 Kibana 讓學生看到 dashboard。OpenSearch、Splunk、ClickHouse、Loki 都可能出現在相似場景，但本 demo 優先選擇 Elasticsearch，是因為它和 Kibana 的整合最直覺，且 Kafka Connect Elasticsearch sink 能清楚展示「Kafka 到外部搜尋/觀測系統」的 sink pipeline。
+
 ## 這個 Demo 展示什麼
 
 Chapter 3 相關概念：

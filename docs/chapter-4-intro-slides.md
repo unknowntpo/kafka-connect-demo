@@ -142,6 +142,40 @@ Kafka -> Elasticsearch / Kibana
 
 ---
 
+# 為什麼需要 Kafka Connect
+
+如果只是 demo 最短路徑，可以寫一支 Java consumer：
+
+```text
+Kafka -> Java consumer -> Elasticsearch
+```
+
+但這樣會把 connector lifecycle、offset、錯誤資料、重啟行為、平行化與監控狀態都變成 application code 的責任。
+
+Kafka Connect 的教學價值在於：它把 Kafka 與外部系統的整合變成一條可設定、可觀察、可重啟的標準 pipeline。
+
+---
+
+# Kafka Connect 在 Demo 做什麼
+
+在這個 demo 中，Kafka Connect 負責：
+
+- 從 `product.events` 讀取事件
+- 用 `JsonConverter` 轉成 ConnectRecord
+- 用 SMT 展平欄位並加上來源標記
+- 寫入 Elasticsearch `product-events`
+- 將壞資料送到 DLQ
+- 提供 connector 與 task 狀態
+
+精確說法：
+
+```text
+Kafka Connect 不是業務邏輯處理器。
+它是 Kafka 與外部系統之間的資料整合層。
+```
+
+---
+
 # 對應到 Demo
 
 為什麼選 Elasticsearch sink？
@@ -152,6 +186,83 @@ Kafka -> Elasticsearch / Kibana
 - 初學者可以直接確認資料已經寫入目標系統
 
 這比把資料寫到某個看不見的系統更適合 demo。
+
+---
+
+# 為什麼選 Elasticsearch
+
+本 demo 要展示的是搜尋與觀測。
+
+因此目標系統需要：
+
+- 接收 JSON events
+- 依時間查詢趨勢
+- 依事件類型與失敗原因聚合
+- 搜尋單筆或一組事件
+- 快速建立 dashboard
+
+Elasticsearch + Kibana 剛好覆蓋這些需求。
+
+---
+
+# 與其他工具相比
+
+Elasticsearch 不是唯一選項。
+
+```text
+OpenSearch:
+  類似 Elasticsearch，常見於 AWS 生態系
+
+Splunk:
+  企業級 log / security / observability 很強，但教學部署較重
+
+ClickHouse / Druid / Pinot:
+  適合高吞吐 OLAP 聚合，但搜尋與 Kibana-style dashboard 不是本 demo 主線
+
+Grafana Loki:
+  適合 logs-first 場景，但任意 JSON event 欄位聚合較不直覺
+```
+
+本 demo 選 Elasticsearch，是因為它最能讓學生立即看見 Kafka event 被搜尋、聚合與視覺化。
+
+---
+
+# 大型公司會怎麼選
+
+大型公司確實會在搜尋、log analytics、observability 與 security 場景使用 Elasticsearch / Elastic Stack。
+
+但實務選型不會只看工具名。
+
+常見考量：
+
+- 既有雲端平台
+- 授權與商業支援
+- 資料量與保留天數
+- 查詢型態
+- 團隊維運能力
+- 與現有監控、告警、資安流程的整合
+
+因此報告時應避免說「一定要用 Elasticsearch」。
+
+較好的說法是：
+
+```text
+在這個 demo 的教學目標下，Elasticsearch 是最直覺的選擇。
+在 production 中，仍應依需求比較 Elasticsearch、OpenSearch、Splunk 與其他分析平台。
+```
+
+---
+
+# 教學方式
+
+這份報告採用「先看結果，再拆管線」：
+
+1. 先看 Kibana dashboard：事件總量、趨勢、成功失敗、售罄原因。
+2. 再看 event model：dashboard 需要哪些欄位。
+3. 再看 Kafka Connect：資料如何從 Kafka 被送到 Elasticsearch。
+4. 最後看 E2E：如何證明 pipeline 真的可重跑、可觀察、可處理壞資料。
+
+這樣學生不需要先懂完整大數據平台，也能理解 Kafka Connect 解決的是哪一段問題。
 
 ---
 
