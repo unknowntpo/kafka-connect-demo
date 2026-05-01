@@ -161,7 +161,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 依 `event_type` 切分的事件量趨勢
 - business outcomes：點擊、成功、失敗
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
-- 活躍使用者分布
+- 高頻操作使用者，用來觀察重複刷新、搶購失敗或疑似 bot 行為
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
 
 ## E2E 驗證

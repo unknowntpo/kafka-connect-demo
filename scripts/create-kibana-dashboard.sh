@@ -165,13 +165,13 @@ create_active_users_table() {
   cat >"$body" <<'JSON'
 {
   "attributes": {
-    "title": "熱門商品 - 活躍使用者",
-    "visState": "{\"title\":\"熱門商品 - 活躍使用者\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"user_id\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":10,\"otherBucket\":false,\"missingBucket\":false}}]}",
+    "title": "熱門商品 - 高頻操作使用者",
+    "visState": "{\"title\":\"熱門商品 - 高頻操作使用者\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"user_id\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":10,\"otherBucket\":false,\"missingBucket\":false}}]}",
     "uiStateJSON": "{}",
-    "description": "依事件數排序的活躍使用者。",
+    "description": "依需求壓力事件排序的高頻操作使用者，用來觀察重複刷新、搶購失敗或疑似 bot 行為。",
     "version": 1,
     "kibanaSavedObjectMeta": {
-      "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+      "searchSourceJSON": "{\"query\":{\"query\":\"event_type: (PAGE_REFRESHED or BUY_CLICKED or COUPON_CLAIM_FAILED or PURCHASE_FAILED)\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
     }
   },
   "references": [

@@ -677,7 +677,7 @@ write.method = upsert
 - Event volume by type
 - Business outcomes
 - Failure reasons
-- Active users
+- High-frequency users
 
 用一句話解釋：
 

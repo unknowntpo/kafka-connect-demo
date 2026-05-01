@@ -138,7 +138,7 @@ Dashboard 應該呈現下列趨勢：
 - Line chart：依 `event_type` 切分的事件量趨勢。
 - Table：business outcomes，例如點擊、成功、失敗。
 - Table：`failure_reason`，用來觀察售罄或限流。
-- Table：依 `user_id` 統計的活躍使用者。
+- Table：依 `user_id` 統計的高頻操作使用者，只看刷新、點擊與失敗等需求壓力事件。
 - Table：依 `metadata_region` 統計的地區流量。`metadata_region` 由 Kafka Connect `Flatten` SMT 從巢狀 `metadata.region` 展平而來。
 
 建立 dashboard：
