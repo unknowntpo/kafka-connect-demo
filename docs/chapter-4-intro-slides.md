@@ -68,12 +68,6 @@ layout: section
 - 失敗事件是否集中在某個時間點？
 - 售罄後使用者是否仍大量重試？
 
-這類問題更接近：
-
-```text
-事件搜尋 + 時間序列統計 + dashboard
-```
-
 ---
 layout: section
 ---
