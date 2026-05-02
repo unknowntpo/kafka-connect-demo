@@ -2,7 +2,7 @@
 
 電商平台需要近即時觀察熱門商品的流量、失敗原因與地區壓力。這類需求看起來像 dashboard 問題，實際上會牽涉事件設計、資料管線、Kafka、Kafka Connect、Elasticsearch 與 Kibana 的分工。
 
-本 demo 的核心問題是：
+這個 demo 的核心問題是：
 
 ```text
 熱門商品事件如何進入 dashboard？
@@ -43,11 +43,11 @@ Insight -> 指標 -> 事件 -> 資料管線 -> Dashboard
 
 第二類是熱門商品狀態。這類指標需要分析事件流，例如每分鐘有多少瀏覽、點擊量是否突然上升、失敗事件是否集中在某個時間點、售罄後使用者是否仍大量重試。
 
-本 demo 聚焦第二類，也就是熱門商品狀態的近即時觀測。
+這個 demo 聚焦第二類，也就是熱門商品狀態的近即時觀測。
 
-## 3. 本 Demo 選定的觀測指標
+## 3. 這個 demo 選定的觀測指標
 
-本 demo 關心「熱門商品或限量折價券是否正在爆量，以及爆量後發生什麼事」。可觀測指標整理如下：
+這個 demo 關心「熱門商品或限量折價券是否正在爆量，以及爆量後發生什麼事」。可觀測指標整理如下：
 
 | 指標 | 想回答的問題 |
 | --- | --- |
@@ -194,7 +194,7 @@ Kafka 會把 event 放進 topic：
 topic = 一條有名字的事件流
 ```
 
-本 demo 的 topic 是：
+這個 demo 的 topic 是：
 
 ```text
 product.events
@@ -237,7 +237,7 @@ Elasticsearch index: product-events
 Kafka Connect = Kafka 與外部系統之間的標準資料搬運層
 ```
 
-本 demo 的完整架構如下：
+這個 demo 的完整架構如下：
 
 ```text
 Java 事件產生器
@@ -285,7 +285,7 @@ Dashboard：
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
-本 demo 採用可重播模式：
+這個 demo 採用可重播模式：
 
 - 每次先清理上一輪 demo 狀態。
 - 使用固定 `BASE_TIME=2026-05-01T12:00:00Z`。
@@ -355,7 +355,7 @@ Sink connector:
   Kafka -> 外部系統
 ```
 
-本 demo 是 sink：
+這個 demo 是 sink：
 
 ```text
 Kafka -> Elasticsearch
@@ -416,7 +416,7 @@ SMT = 對單筆 record 做輕量轉換
 
 SMT 只看當下這一筆資料，適合加欄位、改欄位名、刪欄位或展平欄位。SMT 不會拿多筆事件一起計算，也不會查其他資料表。
 
-本 demo 使用兩個 SMT：
+這個 demo 使用兩個 SMT：
 
 ```text
 Flatten:
@@ -558,7 +558,7 @@ Kafka Connect 是標準化資料整合框架。這一章的重點可以收斂成
 - 失敗資料怎麼處理？
 - 狀態與重送怎麼理解？
 
-本 demo 用熱門商品觀測情境，把這四個問題串在一起：
+這個 demo 用熱門商品觀測情境，把這四個問題串在一起：
 
 ```text
 Application

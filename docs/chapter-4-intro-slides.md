@@ -86,13 +86,13 @@ Insight -> 指標 -> 事件 -> 資料管線 -> Dashboard
 - 失敗事件是否集中在某個時間點？
 - 售罄後使用者是否仍大量重試？
 
-本 demo 接下來聚焦第二類。
+這個 demo 接下來聚焦第二類。
 
 ---
 layout: section
 ---
 
-# 選定本 Demo 的觀測指標
+# 選定這個 demo 的觀測指標
 
 ---
 
@@ -117,7 +117,7 @@ event = 一筆使用者或系統行為紀錄
 
 ---
 
-# 本 Demo 要追蹤的觀測指標
+# 這個 demo 要追蹤的觀測指標
 
 我們關心的是「熱門商品或限量折價券是否正在爆量，以及爆量後發生什麼事」。
 
@@ -371,7 +371,7 @@ Kafka 會把 event 放進 topic。
 topic = 一條有名字的事件流
 ```
 
-本 demo 的 topic：
+這個 demo 的 topic：
 
 ```text
 product.events
@@ -448,7 +448,7 @@ Elasticsearch index: product-events
 Kafka Connect = Kafka 與外部系統之間的標準資料搬運層
 ```
 
-本 demo 的外部系統是 Elasticsearch。
+這個 demo 的外部系統是 Elasticsearch。
 
 ---
 
@@ -531,7 +531,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 
 # Demo 模式說明
 
-本 demo 採用可重播模式：
+這個 demo 採用可重播模式：
 
 - 每次先清理上一輪 demo 狀態。
 - 使用固定 `BASE_TIME=2026-05-01T12:00:00Z`。
@@ -725,7 +725,7 @@ SMT 不會拿多筆事件一起計算，也不會查其他資料表。
 
 ---
 
-# 本 Demo 的 SMT
+# 這個 demo 的 SMT
 
 我們使用兩個 SMT：
 
@@ -917,7 +917,7 @@ Elasticsearch sink 以 at-least-once 方式理解。
 
 ---
 
-# 本 Demo 的重送處理
+# 這個 demo 的重送處理
 
 降低重送影響的方法：
 
@@ -992,7 +992,7 @@ Kafka Connect 負責把事件穩定送到 Elasticsearch，
 Kibana 讓團隊近即時觀察趨勢。
 ```
 
-這就是本 demo 要呈現的資料管線設計。
+這就是這個 demo 要呈現的資料管線設計。
 
 ---
 
