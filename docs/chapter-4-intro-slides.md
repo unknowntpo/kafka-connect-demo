@@ -119,9 +119,7 @@ event = 一筆使用者或系統行為紀錄
 
 # 這個 demo 要追蹤的觀測指標
 
-我們關心的是「熱門商品或限量折價券是否正在爆量，以及爆量後發生什麼事」。
-
-先把想得到的 insight 轉成可計算的指標：
+把想得到的 insight 轉成可計算的指標：
 
 | 指標 | 問題 |
 | --- | --- |
@@ -180,7 +178,19 @@ failure_reason
 metadata.region
 ```
 
-因此，event model 不應任意設計。
+---
+
+# 欄位如何對應指標？
+
+| 欄位 | 支援的指標 |
+| --- | --- |
+| `event_type` | 事件類型趨勢、關鍵行為統計 |
+| `occurred_at` | 每分鐘流量、時間趨勢 |
+| `user_id` | 高頻操作線索 |
+| `product_id / coupon_id` | 指定商品或折價券觀測 |
+| `remaining_stock / remaining_coupons` | 售罄壓力 |
+| `failure_reason` | 失敗原因 |
+| `metadata.region` | 地區流量 |
 
 Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
 

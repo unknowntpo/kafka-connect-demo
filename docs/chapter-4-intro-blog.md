@@ -98,6 +98,18 @@ failure_reason
 metadata.region
 ```
 
+這些欄位和觀測指標的關係如下：
+
+| 欄位 | 支援的指標 | 用途 |
+| --- | --- | --- |
+| `event_type` | 事件類型趨勢、關鍵行為統計 | 區分瀏覽、刷新、排隊、成功、失敗等事件 |
+| `occurred_at` | 事件類型趨勢、每分鐘流量 | 把事件放到時間軸上，才能做每分鐘或每段時間統計 |
+| `user_id` | 高頻操作線索 | 找出是否有少數使用者大量刷新或重試 |
+| `product_id / coupon_id` | 特定商品或折價券的觀測 | 確認 dashboard 觀察的是哪個商品或哪張折價券 |
+| `remaining_stock / remaining_coupons` | 售罄壓力、成功與失敗比例 | 判斷失敗是否和庫存或券數耗盡有關 |
+| `failure_reason` | 失敗原因 | 區分售罄、限流、付款失敗等失敗類型 |
+| `metadata.region` | 地區流量 | 比較不同地區的流量壓力 |
+
 Dashboard 想回答的問題，會直接決定 event model 的欄位設計。
 
 ## 5. Service 背後的工作分工
