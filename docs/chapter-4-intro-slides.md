@@ -295,6 +295,22 @@ layout: section
 
 ---
 
+# 觀測查詢需要另一種系統
+
+事件查詢與聚合統計需要的能力更接近：
+
+- 事件搜尋
+- 時間序列統計
+- dashboard 查詢
+
+因此下一個候選方案是：
+
+```text
+把 event 寫進搜尋與聚合系統
+```
+
+---
+
 # 第二個候選方案：Application 直接寫 Elasticsearch
 
 ---
@@ -311,6 +327,12 @@ Elasticsearch 適合承擔三種工作：
 
 ```text
 為事件查詢與 dashboard 準備好的資料表
+```
+
+新的問題是：
+
+```text
+event 要怎麼從 application 穩定進入 Elasticsearch？
 ```
 
 ---
@@ -349,6 +371,12 @@ application 層保留兩個必要責任：
 ```
 
 後面的搜尋、觀測、dashboard 寫入，交給資料管線處理。
+
+這會導向第三個候選方案：
+
+```text
+Application -> Kafka -> Kafka Connect -> Elasticsearch
+```
 
 第一步先引入 Kafka：
 

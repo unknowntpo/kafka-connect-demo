@@ -158,6 +158,8 @@ Dashboard 想回答的問題，會直接決定 event model 的欄位設計。
 事件查詢與聚合統計需要獨立評估負載、資料量與查詢型態。
 ```
 
+這個判斷會自然導向第二個問題：事件查詢與聚合統計要放在哪裡處理？它們需要的能力和交易 DB 不同，更接近事件搜尋、時間序列統計與 dashboard 查詢。
+
 ## 7. 候選方案二：Application 直接寫 Elasticsearch
 
 Elasticsearch 適合承擔三種工作：
@@ -167,6 +169,8 @@ Elasticsearch 適合承擔三種工作：
 - 聚合與統計
 
 在這個 demo 中，Elasticsearch index 可以想成「為事件查詢與 dashboard 準備好的資料表」。
+
+因此，Elasticsearch 可以作為觀測查詢系統。新的問題是：事件要怎麼從 application 穩定進入 Elasticsearch？
 
 如果電商 application 同步寫 Elasticsearch，使用者請求會變成：
 
@@ -194,6 +198,8 @@ Elasticsearch 適合承擔三種工作：
 ```
 
 後面的搜尋、觀測與 dashboard 寫入，交給資料管線處理。
+
+這個推導形成第三個候選方案：application 先把 event 寫入 Kafka，再由 Kafka Connect 把事件搬到 Elasticsearch。
 
 ## 8. Kafka 的角色：承接事件流
 
