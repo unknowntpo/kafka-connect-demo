@@ -21,7 +21,7 @@
 這些判斷就是 dashboard 要提供的 insight。設計順序可以整理為：
 
 ```text
-Insight -> 指標 -> 事件 -> 資料管線 -> Dashboard
+Insight -> 指標 -> 事件 -> 資料管線
 ```
 
 在判斷 Kafka、Elasticsearch 與 Kibana 的分工之前，需要先把團隊想得到的判斷轉成可計算的指標。

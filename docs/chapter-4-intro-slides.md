@@ -43,7 +43,7 @@ layout: section
 因此設計順序應該是：
 
 ```text
-Insight -> 指標 -> 事件 -> 資料管線 -> Dashboard
+Insight -> 指標 -> 事件 -> 資料管線
 ```
 
 ---
