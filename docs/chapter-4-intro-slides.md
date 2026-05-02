@@ -98,6 +98,13 @@ layout: section
 
 # 為什麼要先選定觀測指標？
 
+先定義兩個接下來會反覆出現的詞：
+
+```text
+event = 一筆使用者或系統行為紀錄
+資料管線 = 把事件從產生端送到查詢或視覺化系統的一連串處理步驟
+```
+
 如果一開始沒有先決定 insight 與指標，後面會不知道：
 
 - event 應該長什麼樣子
@@ -129,9 +136,7 @@ layout: section
 
 # 指標由事件形成
 
-dashboard 上的指標不是手動填寫的數字。
-
-它們通常由大量事件計算而來：
+dashboard 上的指標，通常由大量事件計算而來：
 
 ```text
 單筆事件
@@ -152,13 +157,7 @@ dashboard 上的指標不是手動填寫的數字。
 
 # 指標會反推事件欄位
 
-先定義第一個名詞：
-
-```text
-event = 一次可被記錄的使用者或系統行為
-```
-
-例如：
+在這個 demo 中，一筆 event 可以是：
 
 - 使用者瀏覽商品
 - 使用者重新整理頁面
@@ -240,11 +239,11 @@ layout: section
 
 ---
 
-# 第一個直覺做法：直接查 Database
+# 第一個候選方案：直接查交易 DB
 
 ---
 
-# Database 適合交易；觀測查詢需要另外評估
+# Database 適合承擔交易狀態
 
 在這四種工作裡，交易 Database 最適合承擔「處理交易」與「保存正式狀態」：
 
@@ -252,6 +251,12 @@ layout: section
 - 付款
 - 庫存
 - 使用者資料
+
+這些資料代表正式業務結果，需要正確性與一致性。
+
+---
+
+# 觀測查詢壓在交易 DB 的風險
 
 如果同一個交易 DB 還要承擔「查詢事件」與「聚合統計」，熱門商品爆量時會有下列風險：
 
@@ -269,11 +274,29 @@ layout: section
 
 ---
 
-# 第二個直覺做法：Application 直接寫 Elasticsearch
+# 第二個候選方案：Application 直接寫 Elasticsearch
 
-Elasticsearch 適合承擔「建立可查詢資料」、「查詢事件」與「聚合統計」。
+---
 
-但如果電商 application 同步寫 Elasticsearch：
+# Elasticsearch 在這裡的角色
+
+Elasticsearch 適合承擔三種工作：
+
+- 建立可查詢資料
+- 查詢事件
+- 聚合與統計
+
+在這個 demo 中，Elasticsearch index 可以想成：
+
+```text
+為事件查詢與 dashboard 準備好的資料表
+```
+
+---
+
+# Application 同步寫 Elasticsearch 的代價
+
+如果電商 application 同步寫 Elasticsearch：
 
 ```text
 使用者請求
@@ -285,25 +308,19 @@ Elasticsearch 適合承擔「建立可查詢資料」、「查詢事件」與「
 
 application 需要自己處理：
 
-- Elasticsearch indexing latency
-- retry 與 backpressure
+- 寫入搜尋系統可能變慢。
+- 失敗後要重試。
+- 下游變慢時，使用者請求可能被迫等待。
 - 外部系統短暫失敗
-- 壞資料
 - 重送造成的重複寫入
-- 寫入狀態與監控
 
-設計限制：
-
-```text
-業務 application 同步承擔資料同步管線後，
-請求路徑會受到外部系統 latency、retry 與錯誤處理影響。
-```
+使用者請求會受到外部系統速度、重試與錯誤處理影響。
 
 ---
 
 # 需要一個中間層
 
-application 層只應承擔必要責任：
+application 層保留兩個必要責任：
 
 ```text
 產生 event
@@ -331,8 +348,6 @@ layout: section
 # Kafka 的第一個角色：承接事件流
 
 Kafka 在這個 demo 中扮演事件流入口。
-
-先把它理解成事件流的入口：
 
 ```text
 Application
@@ -389,17 +404,7 @@ Kafka 先保存事件，再由後續系統依各自速度消費。
 
 # Demo 中的 Events
 
-本 demo 支援兩組事件。
-
-
-基本熱門商品事件：
-
-- `PRODUCT_VIEWED`
-- `BUY_CLICKED`
-- `PURCHASE_SUCCEEDED`
-- `PURCHASE_FAILED`
-
-限量折價券 profile 事件：
+講座 demo 主要使用限量折價券事件：
 
 - `COUPON_VIEWED`
 - `PAGE_REFRESHED`
@@ -407,7 +412,7 @@ Kafka 先保存事件，再由後續系統依各自速度消費。
 - `COUPON_CLAIM_SUCCEEDED`
 - `COUPON_CLAIM_FAILED`
 
-目前講座 demo 主要使用限量折價券 profile，因為它能清楚呈現刷新、排隊、售罄與失敗原因。
+這組事件能清楚呈現刷新、排隊、售罄與失敗原因。
 
 Kafka 只負責承接與保存事件流，不負責產生 dashboard，也不負責把資料寫入 Elasticsearch。
 
@@ -510,7 +515,7 @@ Demo 除了展示指令能否執行，也要呈現資料流動後的觀測結果
 just setup
 ```
 
-產生可重跑的 profile-driven 流量。此流程使用固定時間窗產生資料，因此每次執行會得到一致結果：
+產生一組固定劇本的流量。此流程使用固定時間窗產生資料，因此每次執行會得到一致結果：
 
 ```bash
 just replay-demo
@@ -552,7 +557,19 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 | 高頻操作線索 | 觀察重複刷新或搶購失敗是否集中於少數使用者 |
 | 地區流量 | 比較不同地區的壓力分布 |
 
-`關鍵行為統計` 是依條件分組後的事件數；完整轉換率需要額外定義漏斗分母與分子。資料管線是否健康，需要搭配系統狀態與端到端檢查判斷。
+---
+
+# Panel 不能代表全部健康狀態
+
+`關鍵行為統計` 是依條件分組後的事件數。
+
+完整轉換率需要額外定義漏斗分母與分子。
+
+資料管線是否健康，還需要搭配：
+
+- connector / task 狀態
+- Elasticsearch 寫入結果
+- 端到端檢查
 
 ---
 layout: section
@@ -578,8 +595,6 @@ event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 
 # 第四章的核心問題
 
-# 第四章的核心問題
-
 第四章先從一個基本問題開始：
 
 ```text
@@ -594,11 +609,11 @@ event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 - 資料格式改變時是否有演進策略？
 - 外部系統失敗時是否會拖垮 application？
 
-接下來每個 component 都只回答其中一個設計問題。
+接下來每個設計問題只處理其中一個面向。
 
 ---
 
-# Component 1：Connector
+# 設計問題 1：Connector
 
 第一個術語是 connector。
 
@@ -626,7 +641,7 @@ Kafka -> Elasticsearch
 
 ---
 
-# Component 2：Event Model
+# 設計問題 2：Event Model
 
 Dashboard 要回答什麼問題，event 就必須包含對應欄位。
 
@@ -650,16 +665,22 @@ Dashboard 要回答什麼問題，event 就必須包含對應欄位。
 
 ---
 
-# Component 3：Converter
+# 設計問題 3：Converter
 
 Kafka 裡的資料本質上是 bytes。
 
 Kafka Connect 需要 converter。
 
+Kafka 只保存位元資料。Connect 要先把資料解析成有欄位的 record，後面的 SMT 與 sink 才知道怎麼處理。
+
 ```text
 ConnectRecord = Kafka Connect 內部用來表示一筆資料的標準格式
 converter = Kafka bytes 與 ConnectRecord 之間的轉換器
 ```
+
+---
+
+# Converter 在 Sink Pipeline 的位置
 
 Sink pipeline 中的流程：
 
@@ -671,7 +692,9 @@ Kafka bytes
 ConnectRecord
 ```
 
-此 demo 使用 schemaless JSON，也就是不附帶 schema 定義的 JSON。
+此 demo 使用 schemaless JSON。
+
+schemaless JSON 指的是不附帶 schema 定義的 JSON。
 
 教學取捨：
 
@@ -681,7 +704,7 @@ ConnectRecord
 
 ---
 
-# Component 4：SMT 是什麼？
+# 設計問題 4：SMT 是什麼？
 
 SMT 是 Single Message Transform。
 
@@ -720,7 +743,7 @@ InsertField:
 
 ---
 
-# Component 5：Partition
+# 設計問題 5：Partition
 
 先定義 partition。
 
@@ -743,7 +766,7 @@ Kafka 會依照 key 或分配策略，把 event 放進其中一個 partition。
 
 ---
 
-# Component 6：Task
+# 設計問題 6：Task
 
 task 可以先理解成實際搬資料的 worker。
 
@@ -764,7 +787,7 @@ Elasticsearch sink: tasks.max=2
 
 ---
 
-# Component 7：DLQ 壞資料隔離區
+# 設計問題 7：DLQ 壞資料隔離區
 
 DLQ 是 Dead Letter Queue。
 
@@ -785,6 +808,10 @@ DLQ 是 Dead Letter Queue。
 還是保存壞資料，讓主流程繼續？
 ```
 
+---
+
+# Demo 的 DLQ 設定
+
 Demo 設定：
 
 ```text
@@ -794,11 +821,20 @@ errors.deadletterqueue.topic.name=product.events.dlq
 
 此 demo 驗證的是解析或轉換階段的壞資料會進入 DLQ。
 
-DLQ 不代表資料問題消失；它代表問題資料被隔離，後續仍要監控與補償。外部系統故障、mapping conflict 或長時間 backpressure 仍需搭配 retry、監控與告警處理。
+---
+
+# DLQ 之後仍要處理問題
+
+DLQ 代表問題資料被隔離，後續仍要處理：
+
+- 外部系統故障。
+- 寫入 Elasticsearch 時欄位型別不相容。
+- 下游長時間變慢。
+- 監控、告警與補償流程。
 
 ---
 
-# Component 8：Kafka Connect 也需要記住狀態
+# 設計問題 8：Kafka Connect 也需要記住狀態
 
 Kafka Connect worker 需要記住三類資訊：
 
@@ -828,13 +864,25 @@ connect-status-hot-product-demo
 - offsets topic：保存資料讀到哪裡
 - status topic：保存 connector / task 狀態
 
-這表示 Kafka Connect 的重要狀態會保存到 Kafka。
-
-重要狀態會放回 Kafka。
+所以 worker 重啟後，可以從 Kafka 取回設定、進度與狀態。
 
 ---
 
-# Component 9：資料會不會重複寫入？
+# 設計問題 9：資料會不會重複寫入？
+
+資料管線可能會重送資料。
+
+常見原因：
+
+- worker 寫到一半失敗。
+- 網路短暫中斷。
+- 外部系統回應逾時。
+
+因此要先理解 delivery semantics。
+
+---
+
+# Delivery Semantics
 
 跨系統資料管線需要明確說明 delivery semantics。
 
@@ -924,18 +972,12 @@ Kibana
 
 Kafka Connect 是標準化資料整合框架。
 
-它提供 connector、task、converter、SMT、DLQ 與 internal topics 等機制。
+本章重點可以收斂成四個設計問題：
 
-設計 pipeline 時要回答：
-
-- 選哪個 connector？
-- 資料方向是 source 還是 sink？
-- event model 是否支援 dashboard 問題？
-- SMT 只做輕量轉換嗎？
-- tasks 與 partitions 是否合理？
-- 壞資料去哪裡？
-- 出事時如何觀察？
-- 語意保證是否說得精確？
+- 資料往哪裡走？
+- 資料怎麼被解析與轉換？
+- 失敗資料怎麼處理？
+- 狀態與重送怎麼理解？
 
 ---
 
