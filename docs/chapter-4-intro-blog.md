@@ -1,6 +1,6 @@
 # 用熱門商品觀測 Demo 理解 Kafka Connect 資料管線設計
 
-這篇文章是 Kafka Connect 第四章簡報的敘事母稿。目標讀者是剛接觸大數據工程、Kafka 與 Kafka Connect 的學生。文章先建立完整脈絡，再把概念拆成適合投影片呈現的段落。
+電商平台需要近即時觀察熱門商品的流量、失敗原因與地區壓力。這類需求看起來像 dashboard 問題，實際上會牽涉事件設計、資料管線、Kafka、Kafka Connect、Elasticsearch 與 Kibana 的分工。
 
 本 demo 的核心問題是：
 
@@ -8,7 +8,7 @@
 熱門商品事件如何進入 dashboard？
 ```
 
-這個問題看似單純，實際上會牽涉到指標設計、事件模型、資料管線、Kafka、Kafka Connect、Elasticsearch 與 Kibana 的分工。
+接下來會從業務 insight 開始，逐步推導到指標、事件欄位、資料管線與 Kafka Connect 的設計問題。
 
 ## 1. 從想得到的 Insight 開始
 
@@ -576,19 +576,3 @@ Elasticsearch
 Kibana
   讓人看到趨勢與問題
 ```
-
-## 14. 從 Blog 轉成 Slide 的方式
-
-後續產生投影片時，不應逐句搬運整篇文章。比較適合的轉換方式是：
-
-| Blog 段落 | Slide 功能 |
-| --- | --- |
-| 1-2 | 開場：場景、insight、指標 |
-| 3-4 | 指標如何反推事件 |
-| 5-7 | 架構選擇：DB、Elasticsearch、application 分工 |
-| 8-9 | Kafka 與 Kafka Connect 的角色 |
-| 10-11 | Demo 內容與 dashboard panel |
-| 12 | Kafka Connect 第四章術語 |
-| 13 | 收束與總結 |
-
-Slide 的責任是逐步揭露，Blog 的責任是完整敘事。之後調整內容時，應先修改 Blog 的論述，再抽取對應段落更新 Slide。
