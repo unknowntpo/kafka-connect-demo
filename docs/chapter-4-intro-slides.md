@@ -111,7 +111,7 @@ event = 一筆使用者或系統行為紀錄
 - 資料管線需要保存哪些資訊
 - 查詢系統要怎麼查
 - dashboard 要放哪些圖
-- demo 成功與否要怎麼判斷
+- 資料管線是否真的支援觀測與排查
 
 這個順序能避免先建立 pipeline，再回頭推測 dashboard 應呈現哪些資料。
 
@@ -451,9 +451,9 @@ Kafka 先保存事件，再由後續系統依各自速度消費。
 
 ---
 
-# Demo 中的 Events
+# 這條資料管線的 Events
 
-講座 demo 主要使用限量折價券事件：
+這條資料管線主要使用限量折價券事件：
 
 - `COUPON_VIEWED`
 - `PAGE_REFRESHED`
@@ -530,15 +530,15 @@ Kibana Dashboard
 layout: section
 ---
 
-# Demo：可重播的近即時觀測
+# 可重播的近即時觀測流程
 
 ---
 
-# Demo 要讓學生看到什麼？
+# Dashboard 要呈現什麼？
 
-Demo 除了展示指令能否執行，也要呈現資料流動後的觀測結果。
+真實資料管線不能只確認指令有執行。
 
-我們要讓學生在 dashboard 上看到：
+它需要讓 dashboard 呈現可判讀的觀測結果：
 
 - 事件總數快速累積。
 - 事件類型隨時間變化。
@@ -587,7 +587,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 重新產生 24,000 筆折價券搶購事件。
 - Dashboard time range 會對齊固定事件時間窗。
 
-因此，這個 demo 能穩定呈現 Kafka Connect pipeline 與 dashboard 結果。
+因此，這條流程能穩定呈現 Kafka Connect pipeline 與 dashboard 結果。
 
 它採用固定時間窗，重點是可重跑與結果一致。
 
@@ -642,21 +642,22 @@ event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 
 ---
 
-# 第四章的核心問題
+# 第四章的核心主軸
 
-第四章先從一個基本問題開始：
+先抓住一句話：
 
 ```text
-這條資料管線跑不跑得起來？
+資料管線要能跑，
+也要能被維護、觀察與安全重送。
 ```
 
-接著把問題展開成幾個工程面向：
+接下來只看五個問題：
 
-- 這條 pipeline 是否容易維護？
-- 發生故障時是否能觀察與定位？
-- 資料量變大時是否能擴展？
-- 資料格式改變時是否有演進策略？
-- 外部系統失敗時是否會拖垮 application？
+- 方向：資料往哪裡走？
+- 格式：怎麼解析與轉換？
+- 錯誤：壞資料去哪裡？
+- 狀態：出事時看哪裡？
+- 重送：重複寫入怎麼辦？
 
 接下來每個設計問題只處理其中一個面向。
 
@@ -745,9 +746,9 @@ ConnectRecord
 
 schemaless JSON 指的是不附帶 schema 定義的 JSON。
 
-教學取捨：
+此處的設計取捨：
 
-- 初學者容易看懂。
+- JSON event 容易直接觀察。
 - Kibana 可以直接看到欄位。
 - production 通常還需要明確的 schema 與相容性規則。
 
@@ -1037,12 +1038,13 @@ Kibana
 
 Kafka Connect 是標準化資料整合框架。
 
-本章重點可以收斂成四個設計問題：
+回到同一條主軸：
 
-- 資料往哪裡走？
-- 資料怎麼被解析與轉換？
-- 失敗資料怎麼處理？
-- 狀態與重送怎麼理解？
+```text
+資料方向、資料格式、錯誤隔離、狀態觀察、安全重送
+```
+
+這五件事決定一條資料管線能不能長期維運。
 
 ---
 
@@ -1076,7 +1078,7 @@ Demo seed scripts 預設會清理：
 BASE_TIME=2026-05-01T12:00:00Z
 ```
 
-因此每次 demo 都能得到一致的 dashboard 結果。
+因此每次重播都能得到一致的 dashboard 結果。
 
 E2E 驗證：
 

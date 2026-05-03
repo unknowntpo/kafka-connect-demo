@@ -234,7 +234,7 @@ Kafka 提供兩個重要能力：
 
 因此，application 與觀測系統可以用 Kafka 解耦。Kafka 先保存事件，再由後續系統依各自速度消費。
 
-講座 demo 主要使用限量折價券事件：
+這條資料管線主要使用限量折價券事件：
 
 - `COUPON_VIEWED`
 - `PAGE_REFRESHED`
@@ -350,19 +350,21 @@ Demo 建立直覺後，再回到 Kafka Connect 第四章。前面已經建立這
 event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 ```
 
-第四章可以從一個基本問題展開：
+第四章先抓住一條主軸：
 
 ```text
-這條資料管線跑不跑得起來？
+資料管線要能跑，也要能被維護、觀察與安全重送。
 ```
 
-接著延伸成幾個工程面向：
+這條主軸會展開成五個工程問題。每個問題都會對應到後面的 Kafka Connect 術語：
 
-- 資料往哪裡走？
-- 資料怎麼被解析與轉換？
-- 壞資料去哪裡？
-- 出事時如何觀察？
-- 資料重送時是否會造成業務錯誤？
+:::info 這五個問題可以用資料管線中的具體行為理解
+- 資料方向：資料往哪裡走？例：`product.events` topic 的資料最後要寫進 `product-events` Elasticsearch index。
+- 資料格式：資料怎麼被解析與轉換？例：JSON bytes 先由 `JsonConverter` 解析成 Connect record，再由 SMT 加上 `pipeline` 與展平 `metadata.region`。
+- 錯誤隔離：壞資料去哪裡？例：缺少必要欄位或格式錯誤的 record 不應卡住整條管線，應寫入 DLQ 供後續檢查。
+- 狀態觀察：出事時如何觀察？例：透過 Kafka Connect REST API 查看 connector 與 task 狀態，再檢查 Elasticsearch 是否有新文件。
+- 安全重送：資料重送時是否會造成業務錯誤？例：同一筆 `event_id` 重送時，Elasticsearch 使用同一個 document id 做 `upsert`，降低重複寫入造成的影響。
+:::
 
 下面用 demo 對應這些設計問題。
 
@@ -431,7 +433,7 @@ Kafka bytes
 ConnectRecord
 ```
 
-此 demo 使用 schemaless JSON，也就是不附帶 schema 定義的 JSON。這對初學者容易觀察，Kibana 也能直接看到欄位。Production 環境通常還需要明確的 schema 與相容性規則。
+這條 pipeline 使用 schemaless JSON，也就是不附帶 schema 定義的 JSON。JSON event 容易直接觀察，Kibana 也能直接看到欄位。Production 環境通常還需要明確的 schema 與相容性規則。
 
 ### 12.4 SMT：對單筆 record 做輕量轉換
 
@@ -587,14 +589,9 @@ write.method = upsert
 
 ## 13. 本章重點
 
-Kafka Connect 是標準化資料整合框架。這一章的重點可以收斂成四個設計問題：
+Kafka Connect 是標準化資料整合框架。回到本章開頭的主軸，它處理的範圍包含資料方向、資料格式、錯誤隔離、狀態觀察與安全重送。
 
-- 資料往哪裡走？
-- 資料怎麼被解析與轉換？
-- 失敗資料怎麼處理？
-- 狀態與重送怎麼理解？
-
-這個 demo 用熱門商品觀測情境，把這四個問題串在一起：
+這個 demo 用熱門商品觀測情境，把這五個問題串在一起：
 
 ```text
 Application
