@@ -178,13 +178,10 @@ just dashboard
 http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
-## 事件類型
+## 主要事件類型
 
-- `PRODUCT_VIEWED`
-- `BUY_CLICKED`
-- `PURCHASE_SUCCEEDED`
-- `PURCHASE_FAILED`
-- `STOCK_CHANGED`
+限量折價券搶領情境主要使用下列事件：
+
 - `COUPON_VIEWED`
 - `PAGE_REFRESHED`
 - `WAITING_ROOM_JOINED`
@@ -196,20 +193,19 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```json
 {
   "event_id": "evt_...",
-  "event_type": "PURCHASE_SUCCEEDED",
+  "event_type": "COUPON_CLAIM_FAILED",
   "product_id": "sku_hot_001",
-  "product_name": "Limited Edition Keyboard",
+  "coupon_id": "coupon_may_sale",
   "user_id": "user_0042",
   "session_id": "sess_abcd",
-  "occurred_at": "2026-04-29T10:00:04Z",
-  "service": "checkout",
-  "severity": "INFO",
-  "remaining_stock": 42,
-  "order_id": "order_9001",
-  "price": 129.99,
+  "occurred_at": "2026-05-01T20:00:15Z",
+  "service": "coupon-service",
+  "severity": "WARN",
+  "remaining_coupons": 0,
+  "failure_reason": "COUPON_SOLD_OUT",
   "metadata": {
-    "region": "ap-northeast-1",
-    "campaign": "creator-drop"
+    "region": "TW-NORTH",
+    "campaign": "may-sale"
   }
 }
 ```
@@ -220,7 +216,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 
 - 已索引事件總數
 - 依 `event_type` 切分的事件量趨勢
-- 關鍵行為統計：成功、失敗、需求壓力。這是 filter count，不代表完整轉換率。
+- 關鍵行為統計：成功、失敗、頁面重新整理。這是 filter count，不代表完整轉換率。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
 - 高頻操作線索，用來觀察反覆重新整理或搶購失敗是否集中於少數使用者
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
