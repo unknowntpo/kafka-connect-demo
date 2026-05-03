@@ -24,7 +24,7 @@ Kibana dashboard / search UI
 
 這個 demo 的教學方式是「先看見結果，再回到管線設計」。學生先在 Kibana dashboard 看到熱門商品或限量折價券的流量變化、成功與失敗、售罄原因，再回頭拆解事件如何經過 Kafka、Kafka Connect、SMT、DLQ，最後寫入 Elasticsearch。
 
-Kafka Connect 在這裡不是為了取代一支簡短的 Java consumer，而是用來示範實務資料管線的責任邊界：應用程式負責產生業務事件，Kafka 負責承接事件流，Kafka Connect 負責把 Kafka records 穩定寫到外部系統，並提供 connector lifecycle、task 狀態、converter、SMT、DLQ 與 restart 行為。這些是第三章與第四章要討論的核心。
+Kafka Connect 在這裡用來示範實務資料管線的責任邊界：應用程式負責產生業務事件，Kafka 負責承接事件流，Kafka Connect 負責把 Kafka records 穩定寫到外部系統，並提供 connector lifecycle、task 狀態、converter、SMT、DLQ 與 restart 行為。這些是第三章與第四章要討論的核心。
 
 Elasticsearch 的選擇是因為本 demo 的目標是搜尋與觀測，而不是交易系統或長期資料倉儲。它能直接接收 JSON 事件、依時間與欄位查詢、做聚合，並透過 Kibana 讓學生看到 dashboard。OpenSearch、Splunk、ClickHouse、Loki 都可能出現在相似場景，但本 demo 優先選擇 Elasticsearch，是因為它和 Kibana 的整合最直覺，且 Kafka Connect Elasticsearch sink 能清楚展示「Kafka 到外部搜尋/觀測系統」的 sink pipeline。
 
@@ -222,7 +222,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 依 `event_type` 切分的事件量趨勢
 - 關鍵行為統計：成功、失敗、需求壓力。這是 filter count，不代表完整轉換率。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
-- 高頻操作線索，用來觀察重複刷新或搶購失敗是否集中於少數使用者
+- 高頻操作線索，用來觀察反覆重新整理或搶購失敗是否集中於少數使用者
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
 
 ## E2E 驗證

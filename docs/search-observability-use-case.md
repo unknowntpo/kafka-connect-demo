@@ -34,7 +34,7 @@ Kafka Connect 負責把 Kafka 裡的事件送到 Elasticsearch。Java applicatio
 
 ## 給 Mentor 的教學設計
 
-這份 demo 採用「情境優先」的教學方式。主軸不是先解釋所有 Kafka Connect 名詞，而是先設定一個學生容易理解的業務場景：熱門商品或限量折價券突然爆量，營運團隊需要知道流量是否升高、成功與失敗的比例、失敗原因，以及哪些地區或使用者最活躍。
+這份 demo 採用「情境優先」的教學方式。主軸會先設定一個學生容易理解的業務場景：熱門商品或限量折價券突然爆量，營運團隊需要知道流量是否升高、成功與失敗的比例、失敗原因，以及哪些地區或使用者最活躍。Kafka Connect 的名詞會在資料管線逐步成形後再帶入。
 
 教學順序如下：
 
@@ -57,7 +57,7 @@ Kafka Connect 負責把 Kafka 裡的事件送到 Elasticsearch。Java applicatio
 - 透過 REST API 暴露 connector 與 task 狀態，讓 demo 可以檢查 pipeline 是否健康。
 - 使用 Kafka Connect internal topics 保存 connector config、offsets 與 status。
 
-如果只為了 demo 最小路徑，確實可以寫一個 Java consumer 直接讀 Kafka 再呼叫 Elasticsearch API。此處選擇 Kafka Connect，是因為教學目標不是「寫一支可以跑的 consumer」，而是示範實務資料平台常見的 sink pipeline 設計。
+如果只為了 demo 最小路徑，確實可以寫一個 Java consumer 直接讀 Kafka 再呼叫 Elasticsearch API。此處選擇 Kafka Connect，是因為教學目標放在實務資料平台常見的 sink pipeline 設計，而非只完成一支 consumer。
 
 Kafka Connect 的必要性可整理為：
 
@@ -97,7 +97,7 @@ Elasticsearch 搭配 Kibana 符合這些需求。Elastic 官方文件也將 obse
 | ClickHouse / Druid / Pinot | 高吞吐 OLAP、即時分析、聚合查詢 | 適合分析型工作負載；但對初學者展示「事件搜尋 + Kibana dashboard」不如 Elasticsearch 直覺 |
 | Grafana Loki | logs-first、低成本 log aggregation、Grafana 生態系 | 適合 logs pipeline；但對任意 JSON event 的欄位搜尋與聚合展示不如 Elasticsearch 直接 |
 
-結論是：Elasticsearch 不是唯一正確答案，而是最符合本 demo 教學目標的答案。它能同時展示搜尋、聚合、dashboard 與 Kafka Connect sink pipeline。
+結論是：Elasticsearch 並非唯一正確答案；在這個 demo 的教學目標下，它最能同時展示搜尋、聚合、dashboard 與 Kafka Connect sink pipeline。
 
 ## 大型公司會選 Elasticsearch 嗎
 
@@ -138,7 +138,7 @@ Dashboard 應該呈現下列趨勢：
 - Line chart：依 `event_type` 切分的事件量趨勢。
 - Table：關鍵行為統計，例如成功、失敗與需求壓力。這是 filter count，不代表完整轉換率。
 - Table：`failure_reason`，用來觀察售罄或限流。
-- Table：依 `user_id` 統計的高頻操作線索，只看刷新、點擊與失敗等需求壓力事件。
+- Table：依 `user_id` 統計的高頻操作線索，只看重新整理、點擊與失敗等需求壓力事件。
 - Table：依 `metadata_region` 統計的地區流量。`metadata_region` 由 Kafka Connect `Flatten` SMT 從巢狀 `metadata.region` 展平而來。
 
 建立 dashboard：
