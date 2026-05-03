@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
@@ -47,8 +48,13 @@ public final class HotProductEventGenerator {
         }
     }
 
-    private static void generateFromProfile(Config config, KafkaProducer<String, String> producer) throws Exception {
+    private static void generateFromProfile(Config config, Producer<String, String> producer) throws Exception {
         JsonNode profile = MAPPER.readTree(new File(config.profilePath));
+        runProfile(config, profile, producer);
+    }
+
+    // Test seam: runs the profile loop against any Producer (real or MockProducer).
+    static void runProfile(Config config, JsonNode profile, Producer<String, String> producer) throws Exception {
         Random random = new Random(config.seed == null ? System.nanoTime() : config.seed);
         int totalEvents = intValue(profile, "total_events", Math.max(1, config.ratePerSecond * config.durationSeconds));
         int durationSeconds = intValue(profile, "duration_seconds", config.durationSeconds);
@@ -139,7 +145,7 @@ public final class HotProductEventGenerator {
     // Picks the phase whose [start, end) range contains `progress` (0.0–1.0).
     // Ranges are half-open so boundary values (e.g. 0.42) belong to the later phase.
     // Falls back to the last phase when progress == 1.0 or no range matches.
-    private static JsonNode findPhaseForProgress(JsonNode phases, double progress) {
+    static JsonNode findPhaseForProgress(JsonNode phases, double progress) {
         if (!phases.isArray() || phases.size() == 0) {
             return MAPPER.createObjectNode();
         }
@@ -154,14 +160,14 @@ public final class HotProductEventGenerator {
         return fallback;
     }
 
-    private static String chooseProfileEventType(JsonNode phase, int remainingInventory, Random random) {
+    static String chooseProfileEventType(JsonNode phase, int remainingInventory, Random random) {
         if (remainingInventory <= 0 && phase.has("sold_out_event_weights")) {
             return weightedFromNode(phase.path("sold_out_event_weights"), random, "COUPON_CLAIM_FAILED");
         }
         return weightedFromNode(phase.path("event_weights"), random, "PAGE_REFRESHED");
     }
 
-    private static String weightedFromNode(JsonNode weights, Random random, String fallback) {
+    static String weightedFromNode(JsonNode weights, Random random, String fallback) {
         if (!weights.isObject() || weights.size() == 0) {
             return fallback;
         }
@@ -185,7 +191,7 @@ public final class HotProductEventGenerator {
         return fallback;
     }
 
-    private static long profileEventTimeMillis(long baseMillis, long durationMillis, double progress, double timeSkewPower) {
+    static long profileEventTimeMillis(long baseMillis, long durationMillis, double progress, double timeSkewPower) {
         double shapedProgress = 1.0d - Math.pow(1.0d - progress, Math.max(1.0d, timeSkewPower));
         return baseMillis + Math.round(durationMillis * shapedProgress);
     }
@@ -420,18 +426,18 @@ public final class HotProductEventGenerator {
         return sequence % 3 == 0 ? "creator-drop" : "organic";
     }
 
-    private static final class Config {
-        private String topic = DEFAULT_TOPIC;
-        private String bootstrapServers = System.getenv().getOrDefault("KAFKA_BOOTSTRAP_SERVERS", DEFAULT_BOOTSTRAP);
-        private int ratePerSecond = 50;
-        private int durationSeconds = 8;
-        private int initialStock = 60;
-        private Double malformedRatio = 0.01;
-        private Long seed = 42L;
-        private boolean sleepBetweenEvents = false;
-        private boolean flatTraffic = false;
-        private String profilePath = null;
-        private String baseTime = null;
+    static final class Config {
+        String topic = DEFAULT_TOPIC;
+        String bootstrapServers = System.getenv().getOrDefault("KAFKA_BOOTSTRAP_SERVERS", DEFAULT_BOOTSTRAP);
+        int ratePerSecond = 50;
+        int durationSeconds = 8;
+        int initialStock = 60;
+        Double malformedRatio = 0.01;
+        Long seed = 42L;
+        boolean sleepBetweenEvents = false;
+        boolean flatTraffic = false;
+        String profilePath = null;
+        String baseTime = null;
 
         private static Config parse(String[] args) {
             Config config = new Config();
