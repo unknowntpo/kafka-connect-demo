@@ -22,7 +22,7 @@ import java.util.UUID;
 public final class HotProductEventGenerator {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String DEFAULT_TOPIC = "product.events";
-    private static final String DEFAULT_BOOTSTRAP = "host.docker.internal:19092";
+    private static final String DEFAULT_BOOTSTRAP = "host.docker.internal:9092";
     private static final String PRODUCT_ID = "sku_hot_001";
     private static final String PRODUCT_NAME = "Limited Edition Keyboard";
     private static final BigDecimal PRICE = new BigDecimal("129.99");

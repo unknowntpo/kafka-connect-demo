@@ -17,8 +17,6 @@ MIDDLE_FROM="${MIDDLE_FROM:-2026-05-01T11:00:00Z}"
 MIDDLE_TO="${MIDDLE_TO:-2026-05-01T11:30:00Z}"
 LAST_FROM="${LAST_FROM:-2026-05-01T11:30:00Z}"
 LAST_TO="${LAST_TO:-2026-05-01T12:05:00Z}"
-ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
-KIBANA_URL="${KIBANA_URL:-http://localhost:${KIBANA_HOST_PORT:-15601}}"
 
 cd "$ROOT_DIR"
 
@@ -45,7 +43,7 @@ GRADLE_DOCKER_NETWORK="$GRADLE_DOCKER_NETWORK" KAFKA_BOOTSTRAP_SERVERS="$KAFKA_B
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --profile=/workspace/$PROFILE --seed=$SEED --base-time=$BASE_TIME --malformed-ratio=$MALFORMED_RATIO"
 
 for attempt in $(seq 1 90); do
-  count="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_count" 2>/dev/null | jq -r '.count // 0' || true)"
+  count="$(curl -fsS 'http://localhost:9200/product-events/_count' 2>/dev/null | jq -r '.count // 0' || true)"
   if [[ "$count" =~ ^[0-9]+$ ]] && (( count >= expected_events )); then
     echo "Indexed $count events from AI load profile."
     WINDOW_FROM="$DASHBOARD_TIME_FROM" WINDOW_TO="$DASHBOARD_TIME_TO" \
@@ -53,7 +51,7 @@ for attempt in $(seq 1 90); do
       MIDDLE_FROM="$MIDDLE_FROM" MIDDLE_TO="$MIDDLE_TO" \
       LAST_FROM="$LAST_FROM" LAST_TO="$LAST_TO" \
       "$ROOT_DIR/scripts/score-load-profile.sh"
-    echo "Dashboard: $KIBANA_URL/app/dashboards#/view/hot-product-sales-dashboard"
+    echo "Dashboard: http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard"
     exit 0
   fi
   sleep 2

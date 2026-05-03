@@ -2,8 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONNECT_URL="${CONNECT_URL:-http://localhost:${CONNECT_HOST_PORT:-18083}}"
-ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
 
 assert_eq() {
   local expected="$1"
@@ -20,7 +18,7 @@ wait_for_index_count() {
   local attempt
   for attempt in $(seq 1 60); do
     local actual
-    actual="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_count" 2>/dev/null | jq -r '.count // empty' || true)"
+    actual="$(curl -fsS http://localhost:9200/product-events/_count 2>/dev/null | jq -r '.count // empty' || true)"
     actual="${actual//$'\r'/}"
     if [[ "$actual" =~ ^[0-9]+$ ]] && (( actual >= expected )); then
       return 0
@@ -36,7 +34,7 @@ wait_for_connector_running() {
   local attempt
   for attempt in $(seq 1 60); do
     local all_running
-    all_running="$(curl -fsS "$CONNECT_URL/connectors/$connector/status" 2>/dev/null \
+    all_running="$(curl -fsS "http://localhost:8083/connectors/$connector/status" 2>/dev/null \
       | jq -r '(.connector.state == "RUNNING") and ((.tasks | length) > 0) and all(.tasks[]; .state == "RUNNING")' 2>/dev/null || true)"
     if [[ "$all_running" == "true" ]]; then
       return 0
@@ -64,7 +62,7 @@ cd "$ROOT_DIR"
 "$ROOT_DIR/scripts/start.sh"
 "$ROOT_DIR/scripts/wait-for-connect.sh"
 
-plugin_names="$(curl -fsS "$CONNECT_URL/connector-plugins" | jq -r '.[].class')"
+plugin_names="$(curl -fsS http://localhost:8083/connector-plugins | jq -r '.[].class')"
 if [[ "$plugin_names" != *"io.confluent.connect.elasticsearch.ElasticsearchSinkConnector"* ]]; then
   echo "Elasticsearch sink connector plugin is missing" >&2
   exit 1
@@ -79,7 +77,7 @@ GRADLE_DOCKER_NETWORK=kafka-connect-demo_default KAFKA_BOOTSTRAP_SERVERS=broker:
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=80 --duration-seconds=5 --initial-stock=40 --seed=42 --malformed-ratio=0.02"
 wait_for_index_count 100
 
-indexed_count="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_count" | jq -r '.count')"
+indexed_count="$(curl -fsS http://localhost:9200/product-events/_count | jq -r '.count')"
 if (( indexed_count < 100 )); then
   echo "Expected at least 100 indexed product events, got $indexed_count" >&2
   exit 1
@@ -87,19 +85,19 @@ fi
 
 assert_topic_contains "PURCHASE_SUCCEEDED"
 
-stock_docs="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"term":{"event_type":"PURCHASE_FAILED"}}}' | jq -r '.hits.total.value')"
+stock_docs="$(curl -fsS "http://localhost:9200/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"term":{"event_type":"PURCHASE_FAILED"}}}' | jq -r '.hits.total.value')"
 if (( stock_docs < 1 )); then
   echo "Expected at least one PURCHASE_FAILED document" >&2
   exit 1
 fi
 
-pipeline_docs="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"term":{"pipeline":"connect-search-demo"}}}' | jq -r '.hits.total.value')"
+pipeline_docs="$(curl -fsS "http://localhost:9200/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"term":{"pipeline":"connect-search-demo"}}}' | jq -r '.hits.total.value')"
 if (( pipeline_docs < 100 )); then
   echo "Expected SMT pipeline metadata in indexed documents" >&2
   exit 1
 fi
 
-region_docs="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"exists":{"field":"metadata_region"}}}' | jq -r '.hits.total.value')"
+region_docs="$(curl -fsS "http://localhost:9200/product-events/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"exists":{"field":"metadata_region"}}}' | jq -r '.hits.total.value')"
 if (( region_docs < 100 )); then
   echo "Expected SMT-flattened metadata_region in indexed documents" >&2
   exit 1
@@ -119,7 +117,7 @@ GRADLE_DOCKER_NETWORK=kafka-connect-demo_default KAFKA_BOOTSTRAP_SERVERS=broker:
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=20 --duration-seconds=2 --initial-stock=10 --seed=99 --malformed-ratio=0"
 wait_for_index_count "$((indexed_count + 1))"
 
-final_count="$(curl -fsS "$ELASTICSEARCH_URL/product-events/_count" | jq -r '.count')"
+final_count="$(curl -fsS http://localhost:9200/product-events/_count | jq -r '.count')"
 if (( final_count <= indexed_count )); then
   echo "Expected more documents after Connect restart; before=$indexed_count after=$final_count" >&2
   exit 1

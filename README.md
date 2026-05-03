@@ -52,13 +52,11 @@ Chapter 4 相關概念：
 
 ## 服務與網址
 
-- Kafka broker: `localhost:19092`
-- Kafka Connect REST: `http://localhost:18083`
-- Redpanda Console: `http://localhost:18080`
-- Elasticsearch: `http://localhost:19200`
-- Kibana: `http://localhost:15601`
-
-這些 host port 都可以用環境變數覆寫：`KAFKA_HOST_PORT`、`CONNECT_HOST_PORT`、`REDPANDA_CONSOLE_HOST_PORT`、`ELASTICSEARCH_HOST_PORT`、`KIBANA_HOST_PORT`。`scripts/start.sh` 會先檢查要啟動的服務 port 是否已被其他服務占用。
+- Kafka broker: `localhost:9092`
+- Kafka Connect REST: `localhost:8083`
+- Redpanda Console: `http://localhost:8080`
+- Elasticsearch: `http://localhost:9200`
+- Kibana: `http://localhost:5601`
 
 ## Dashboard As Code
 
@@ -114,14 +112,6 @@ just slides-build
 
 ## 快速開始
 
-只想快速看懂 Kafka Connect 的用途，可以先跑最小版 demo：
-
-```bash
-just quick-demo
-```
-
-它只會啟動 Kafka、Kafka Connect、Redpanda Console，註冊內建 `FileStreamSinkConnector`，把 `quick.orders` topic 的資料寫到本機 [sink/quick-orders.jsonl](/Users/unknowntpo/repo/unknowntpo/kafka-connect-demo/sink/quick-orders.jsonl)。展示時可以打開 `http://localhost:18080`，看 topic、message、connector 與 task 狀態。
-
 正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並用固定時間窗產生同一批資料：
 
 ```bash
@@ -131,7 +121,7 @@ just replay-demo
 Dashboard：
 
 ```text
-http://localhost:15601/app/dashboards#/view/hot-product-sales-dashboard
+http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
 如果需要逐步觀察各元件啟動流程，可以改用下列指令：
@@ -185,7 +175,7 @@ just dashboard
 打開 dashboard：
 
 ```text
-http://localhost:15601/app/dashboards#/view/hot-product-sales-dashboard
+http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 ```
 
 ## 主要事件類型

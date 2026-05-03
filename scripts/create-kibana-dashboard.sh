@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KIBANA_URL="${KIBANA_URL:-http://localhost:${KIBANA_HOST_PORT:-15601}}"
+KIBANA_URL="${KIBANA_URL:-http://localhost:5601}"
 DASHBOARD_ID="hot-product-sales-dashboard"
 DASHBOARD_DEFINITION="${DASHBOARD_DEFINITION:-$ROOT_DIR/dashboards/hot-product-sales-observability.ndjson}"
 DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-now-90m}"

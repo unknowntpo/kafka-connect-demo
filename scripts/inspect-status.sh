@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONNECT_URL="${CONNECT_URL:-http://localhost:${CONNECT_HOST_PORT:-18083}}"
-CONNECTORS="${CONNECTORS:-elasticsearch-sink-product-events file-sink-quick-demo}"
-
-for connector in $CONNECTORS; do
+for connector in elasticsearch-sink-product-events; do
   echo "=== $connector ==="
-  curl -fsS "$CONNECT_URL/connectors/$connector/status" | jq . || true
+  curl -fsS "http://localhost:8083/connectors/$connector/status" | jq .
 done

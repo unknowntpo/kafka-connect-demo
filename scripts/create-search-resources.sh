@@ -2,17 +2,16 @@
 set -euo pipefail
 
 FORCE_RECREATE_INDEX="${FORCE_RECREATE_INDEX:-0}"
-ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
 
-if curl -fsS -I "$ELASTICSEARCH_URL/product-events" >/dev/null 2>&1; then
+if curl -fsS -I "http://localhost:9200/product-events" >/dev/null 2>&1; then
   if [[ "$FORCE_RECREATE_INDEX" == "1" ]]; then
-    curl -fsS -X DELETE "$ELASTICSEARCH_URL/product-events" >/dev/null
+    curl -fsS -X DELETE "http://localhost:9200/product-events" >/dev/null
   else
     exit 0
   fi
 fi
 
-curl -fsS -X PUT "$ELASTICSEARCH_URL/product-events" \
+curl -fsS -X PUT "http://localhost:9200/product-events" \
   -H "Content-Type: application/json" \
   -d '{
     "mappings": {

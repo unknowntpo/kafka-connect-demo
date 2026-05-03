@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-host.docker.internal:${KAFKA_HOST_PORT:-19092}}"
+KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-host.docker.internal:9092}"
 GRADLE_DOCKER_NETWORK="${GRADLE_DOCKER_NETWORK:-}"
 
 network_args=()
