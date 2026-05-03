@@ -61,7 +61,7 @@ public final class HotProductEventGenerator {
 
         for (int i = 0; i < totalEvents; i++) {
             double progress = (double) i / (double) totalEvents;
-            JsonNode phase = phaseFor(profile.path("phases"), progress);
+            JsonNode phase = findPhaseForProgress(profile.path("phases"), progress);
             String eventType = chooseProfileEventType(phase, remainingInventory, random);
             int beforeInventory = remainingInventory;
             if (isSuccessEvent(eventType) && remainingInventory <= 0) {
@@ -136,7 +136,10 @@ public final class HotProductEventGenerator {
         return event;
     }
 
-    private static JsonNode phaseFor(JsonNode phases, double progress) {
+    // Picks the phase whose [start, end) range contains `progress` (0.0–1.0).
+    // Ranges are half-open so boundary values (e.g. 0.42) belong to the later phase.
+    // Falls back to the last phase when progress == 1.0 or no range matches.
+    private static JsonNode findPhaseForProgress(JsonNode phases, double progress) {
         if (!phases.isArray() || phases.size() == 0) {
             return MAPPER.createObjectNode();
         }
