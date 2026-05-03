@@ -443,7 +443,16 @@ SMT = 對單筆 record 做輕量轉換
 
 SMT 只看當下這一筆資料，適合加欄位、改欄位名、刪欄位或展平欄位。SMT 不會拿多筆事件一起計算，也不會查其他資料表。
 
-這個 demo 使用兩個 SMT：
+這個 demo 使用 SMT 的目的，是把 application 產生的事件調整成更適合 Elasticsearch 與 Kibana 查詢的形狀，同時不需要回頭修改 application code。
+
+此處有兩個具體需求：
+
+| 需求 | SMT | 轉換結果 | 用途 |
+| --- | --- | --- | --- |
+| 依地區做 dashboard 分組 | `Flatten` | `metadata.region` -> `metadata_region` | Kibana panel 可以直接用 `metadata_region` 做 terms aggregation |
+| 標記資料來源管線 | `InsertField` | 加上 `pipeline=connect-search-demo` | 查詢與測試可以確認資料是由這條 Kafka Connect pipeline 寫入 |
+
+對應到 connector 設定，這個 demo 使用兩個 SMT：
 
 ```text
 Flatten:

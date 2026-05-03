@@ -774,16 +774,32 @@ SMT 不會拿多筆事件一起計算，也不會查其他資料表。
 
 ---
 
+# 為什麼這個 demo 需要 SMT？
+
+Application 送出的 event 保留業務語意。
+
+Elasticsearch 與 Kibana 需要適合查詢與分組的欄位。
+
+SMT 負責在 Connect pipeline 裡做這層輕量調整。
+
+```text
+application event -> Connect SMT -> search-friendly document
+```
+
+---
+
 # 這個 demo 的 SMT
 
 我們使用兩個 SMT：
 
-```text
-Flatten:
-  metadata.region -> metadata_region
+| SMT | 轉換 | 目的 |
+| --- | --- | --- |
+| `Flatten` | `metadata.region` -> `metadata_region` | 讓 dashboard 直接依地區分組 |
+| `InsertField` | `pipeline=connect-search-demo` | 標記資料由這條 Connect pipeline 寫入 |
 
-InsertField:
-  pipeline=connect-search-demo
+```text
+metadata.region       metadata_region
+pipeline              connect-search-demo
 ```
 
 這兩個轉換都只處理單筆 record。
