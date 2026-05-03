@@ -182,15 +182,15 @@ metadata.region
 
 # 欄位如何對應指標？
 
-| 欄位 | 支援的指標 |
-| --- | --- |
-| `event_type` | 事件類型趨勢、關鍵行為統計 |
-| `occurred_at` | 每分鐘流量、時間趨勢 |
-| `user_id` | 高頻操作線索 |
-| `product_id / coupon_id` | 指定商品或折價券觀測 |
-| `remaining_stock / remaining_coupons` | 售罄壓力 |
-| `failure_reason` | 失敗原因 |
-| `metadata.region` | 地區流量 |
+| 欄位 | 範例值 | 支援的指標 |
+| --- | --- | --- |
+| `event_type` | `PAGE_REFRESHED` | 事件類型趨勢 |
+| `occurred_at` | `2026-05-01T20:00:15Z` | 每分鐘流量 |
+| `user_id` | `user_01883` | 高頻操作線索 |
+| `coupon_id` | `coupon_may_sale` | 指定折價券觀測 |
+| `remaining_coupons` | `0` | 售罄壓力 |
+| `failure_reason` | `RATE_LIMITED` | 失敗原因 |
+| `metadata.region` | `TW-NORTH` | 地區流量 |
 
 Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
 
