@@ -5,3 +5,4 @@ app/.gradle/
 .DS_Store
 node_modules/
 docs/dist/
+exports/
