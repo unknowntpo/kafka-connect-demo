@@ -1,0 +1,14 @@
+{
+  "name": "file-sink-quick-demo",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "tasks.max": "1",
+    "topics": "quick.orders",
+    "file": "/tmp/kafka-connect-demo-sink/quick-orders.jsonl",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true"
+  }
+}

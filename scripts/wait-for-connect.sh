@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONNECT_URL="${CONNECT_URL:-http://localhost:${CONNECT_HOST_PORT:-18083}}"
+ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
+WAIT_FOR_ELASTICSEARCH="${WAIT_FOR_ELASTICSEARCH:-1}"
 
 wait_for_http() {
   local url="$1"
@@ -20,6 +23,8 @@ wait_for_http() {
 
 cd "$ROOT_DIR"
 
-wait_for_http http://localhost:9200/_cluster/health "Elasticsearch"
-wait_for_http http://localhost:8083/connectors "Kafka Connect REST"
-wait_for_http http://localhost:8083/connector-plugins "Kafka Connect plugins endpoint"
+if [[ "$WAIT_FOR_ELASTICSEARCH" == "1" ]]; then
+  wait_for_http "$ELASTICSEARCH_URL/_cluster/health" "Elasticsearch"
+fi
+wait_for_http "$CONNECT_URL/connectors" "Kafka Connect REST"
+wait_for_http "$CONNECT_URL/connector-plugins" "Kafka Connect plugins endpoint"

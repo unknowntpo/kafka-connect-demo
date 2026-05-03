@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:9200}"
+ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
 SCENARIO="${SCENARIO:-flash-sale-coupon}"
 WINDOW_FROM="${WINDOW_FROM:-now-90m}"
 WINDOW_TO="${WINDOW_TO:-now}"

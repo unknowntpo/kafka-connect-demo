@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONNECTOR_NAME="${CONNECTOR_NAME:-elasticsearch-sink-product-events}"
+CONNECT_URL="${CONNECT_URL:-http://localhost:${CONNECT_HOST_PORT:-18083}}"
+ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:${ELASTICSEARCH_HOST_PORT:-19200}}"
 TOPICS=(
   "product.events"
   "product.events.dlq"
@@ -26,7 +28,7 @@ wait_for_broker() {
 wait_for_elasticsearch() {
   local attempt
   for attempt in $(seq 1 60); do
-    if curl -fsS http://localhost:9200/_cluster/health >/dev/null 2>&1; then
+    if curl -fsS "$ELASTICSEARCH_URL/_cluster/health" >/dev/null 2>&1; then
       return 0
     fi
     sleep 2
@@ -36,7 +38,7 @@ wait_for_elasticsearch() {
 }
 
 clear_elasticsearch_readonly_blocks() {
-  curl -fsS -X PUT "http://localhost:9200/_all/_settings" \
+  curl -fsS -X PUT "$ELASTICSEARCH_URL/_all/_settings" \
     -H "Content-Type: application/json" \
     -d '{"index.blocks.read_only_allow_delete": null}' >/dev/null 2>&1 || true
 }
@@ -68,7 +70,7 @@ wait_for_broker
 wait_for_elasticsearch
 clear_elasticsearch_readonly_blocks
 
-curl -fsS -X DELETE "http://localhost:8083/connectors/$CONNECTOR_NAME" >/dev/null 2>&1 || true
+curl -fsS -X DELETE "$CONNECT_URL/connectors/$CONNECTOR_NAME" >/dev/null 2>&1 || true
 docker compose stop connect >/dev/null 2>&1 || true
 
 for topic in "${TOPICS[@]}"; do
@@ -83,7 +85,7 @@ for topic in "${TOPICS[@]}"; do
   wait_topic_deleted "$topic"
 done
 
-curl -fsS -X DELETE "http://localhost:9200/product-events" >/dev/null 2>&1 || true
+curl -fsS -X DELETE "$ELASTICSEARCH_URL/product-events" >/dev/null 2>&1 || true
 
 docker compose up -d connect kibana redpanda-console >/dev/null
 "$ROOT_DIR/scripts/wait-for-connect.sh"

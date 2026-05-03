@@ -15,6 +15,9 @@ slides-build:
 start:
     ./scripts/start.sh
 
+quick-demo:
+    ./scripts/quick-demo.sh
+
 wait:
     ./scripts/wait-for-connect.sh
 
