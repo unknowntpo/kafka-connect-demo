@@ -473,6 +473,35 @@ InsertField:
 
 這兩個轉換都只處理單筆 record。
 
+同一筆資料在 Producer 送出時，保留的是比較自然的事件結構：
+
+```json
+{
+  "event_id": "evt_001",
+  "event_type": "PAGE_REFRESHED",
+  "coupon_id": "coupon_mayday_001",
+  "occurred_at": "2026-05-01T20:00:15Z",
+  "metadata": {
+    "region": "TW-NORTH"
+  }
+}
+```
+
+寫入 Elasticsearch 前，Kafka Connect 透過 SMT 把它調整成 dashboard 較容易使用的文件形狀：
+
+```json
+{
+  "event_id": "evt_001",
+  "event_type": "PAGE_REFRESHED",
+  "coupon_id": "coupon_mayday_001",
+  "occurred_at": "2026-05-01T20:00:15Z",
+  "metadata_region": "TW-NORTH",
+  "pipeline": "connect-search-demo"
+}
+```
+
+這個轉換沒有改變事件的業務意義，只是把資料整理成更適合 Elasticsearch 查詢與 Kibana 聚合的欄位。
+
 ### 12.5 Partition 與 Task：平行處理
 
 ```text

@@ -805,6 +805,24 @@ application event -> Connect SMT -> search-friendly document
 
 ---
 
+# 資料形狀在哪裡改變？
+
+Producer 送出的 event：
+
+```json
+{"metadata":{"region":"TW-NORTH"}}
+```
+
+Connect 寫入 Elasticsearch 前：
+
+```json
+{"metadata_region":"TW-NORTH","pipeline":"connect-search-demo"}
+```
+
+業務事件不變，查詢欄位變得更直接。
+
+---
+
 # 這個 demo 的 SMT
 
 我們使用兩個 SMT：
