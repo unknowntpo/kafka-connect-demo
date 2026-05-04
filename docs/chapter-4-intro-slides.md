@@ -14,11 +14,20 @@ mdc: true
 
 用限量折價券搶領觀測理解資料管線設計
 
+<div class="grid grid-cols-[1fr_160px] gap-8 items-end mt-10">
+<div>
+
 ```text
 限量折價券搶領事件如何進入 dashboard？
 ```
 
-給剛接觸大數據與 Kafka Connect 的學生
+Repo: [github.com/unknowntpo/kafka-connect-demo](https://github.com/unknowntpo/kafka-connect-demo)
+
+</div>
+
+<img src="/repo-qr.png" class="w-40 bg-white p-2 rounded" />
+
+</div>
 
 ---
 layout: section
