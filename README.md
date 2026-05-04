@@ -121,8 +121,10 @@ just run-demo
 Dashboard：
 
 ```text
-http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
+使用 `just run-demo` 最後印出的 Dashboard URL。
 ```
+
+這個 URL 會帶入本輪資料的絕對時間窗。如果改成 Kibana 的 `Last 15 minutes`、`Last 1 hour` 這類相對時間，可能只看到部分事件。
 
 如果需要逐步觀察各元件啟動流程，可以改用下列指令：
 

@@ -7,6 +7,7 @@ DASHBOARD_ID="hot-product-sales-dashboard"
 DASHBOARD_DEFINITION="${DASHBOARD_DEFINITION:-$ROOT_DIR/dashboards/hot-product-sales-observability.ndjson}"
 DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-now-90m}"
 DASHBOARD_TIME_TO="${DASHBOARD_TIME_TO:-now}"
+DASHBOARD_URL="$KIBANA_URL/app/dashboards#/view/$DASHBOARD_ID?_g=(filters:!(),refreshInterval:(pause:!f,value:30000),time:(from:'$DASHBOARD_TIME_FROM',to:'$DASHBOARD_TIME_TO'))"
 
 wait_for_kibana() {
   local attempt
@@ -81,4 +82,4 @@ import_saved_objects
 set_dashboard_time_window
 
 echo "Imported Kibana dashboard definition: $DASHBOARD_DEFINITION"
-echo "Dashboard: $KIBANA_URL/app/dashboards#/view/$DASHBOARD_ID"
+echo "Dashboard: $DASHBOARD_URL"

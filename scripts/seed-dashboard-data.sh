@@ -11,6 +11,7 @@ SEED="${SEED:-20260429}"
 MALFORMED_RATIO="${MALFORMED_RATIO:-0}"
 RESET_STATE="${RESET_STATE:-1}"
 eval "$(DEMO_DURATION_SECONDS="$DURATION_SECONDS" "$ROOT_DIR/scripts/resolve-demo-time-window.py")"
+DASHBOARD_URL="http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard?_g=(filters:!(),refreshInterval:(pause:!f,value:30000),time:(from:'$DASHBOARD_TIME_FROM',to:'$DASHBOARD_TIME_TO'))"
 
 wait_for_index_count() {
   local expected="$1"
@@ -54,4 +55,4 @@ curl -fsS "http://localhost:9200/product-events/_search?size=0" \
   -d "{\"query\":{\"range\":{\"occurred_at\":{\"gte\":\"$DASHBOARD_TIME_FROM\",\"lte\":\"$DASHBOARD_TIME_TO\"}}},\"aggs\":{\"types\":{\"terms\":{\"field\":\"event_type\",\"size\":10}}}}" \
   | jq -r '.aggregations.types.buckets[] | "\(.key)=\(.doc_count)"'
 
-echo "Dashboard: http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard"
+echo "Dashboard: $DASHBOARD_URL"
