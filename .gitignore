@@ -3,7 +3,6 @@ app/target/
 app/.gradle/
 .gradle-cache/
 .DS_Store
-.idea/
 node_modules/
 docs/dist/
 exports/
