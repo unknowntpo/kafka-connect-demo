@@ -374,7 +374,7 @@ event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
 
 下面用 demo 對應這些設計問題。
 
-### 12.1 Connector：資料方向
+### 12.1 方向：Connector 決定資料往哪裡走
 
 ```text
 connector = Kafka Connect 用來連接外部系統的元件
@@ -398,7 +398,7 @@ Kafka -> Elasticsearch
 
 原因是要把 Kafka events 變成可以搜尋、聚合與視覺化的資料。
 
-### 12.2 Event Model：Dashboard 要回答什麼問題
+### 12.2 格式：Event Model 決定資料長什麼樣子
 
 Dashboard 要回答什麼問題，event 就必須包含對應欄位。
 
@@ -420,7 +420,7 @@ Dashboard 要回答什麼問題，event 就必須包含對應欄位。
 
 Event model 屬於資料設計問題，會影響 converter、SMT、sink connector 與 dashboard 的後續處理。
 
-### 12.3 Converter：把 bytes 解析成 record
+### 12.3 格式：Converter 把 bytes 解析成 record
 
 Kafka 裡的資料本質上是 bytes。Kafka Connect 要先把資料解析成有欄位的 record，後面的 SMT 與 sink 才知道怎麼處理。
 
@@ -441,7 +441,7 @@ ConnectRecord
 
 這條 pipeline 使用 schemaless JSON，也就是不附帶 schema 定義的 JSON。JSON event 容易直接觀察，Kibana 也能直接看到欄位。Production 環境通常還需要明確的 schema 與相容性規則。
 
-### 12.4 SMT：對單筆 record 做輕量轉換
+### 12.4 格式：SMT 對單筆 record 做輕量轉換
 
 SMT 是 Single Message Transform。
 
@@ -503,7 +503,7 @@ InsertField:
 
 這個轉換沒有改變事件的業務意義，只是把資料整理成更適合 Elasticsearch 查詢與 Kibana 聚合的欄位。
 
-### 12.5 Partition 與 Task：平行處理
+### 12.5 方向：Partition 與 Task 負責平行處理
 
 ```text
 partition = topic 內部的分段
@@ -535,7 +535,7 @@ Elasticsearch sink: tasks.max=2
 
 `tasks.max=2` 表示最多允許 2 個 task；實際 task 數仍受 partitions、connector 行為與外部系統限制。
 
-### 12.6 DLQ：壞資料隔離區
+### 12.6 錯誤：DLQ 是壞資料隔離區
 
 DLQ 是 Dead Letter Queue，用來暫存無法處理的壞資料。
 
@@ -563,7 +563,7 @@ errors.deadletterqueue.topic.name=product.events.dlq
 
 DLQ 代表問題資料被隔離。後續仍要處理外部系統故障、寫入 Elasticsearch 時欄位型別不相容、下游長時間變慢，以及監控、告警與補償流程。
 
-### 12.7 Internal Topics：Kafka Connect 也需要記住狀態
+### 12.7 狀態：Internal Topics 保存 Connect 狀態
 
 Kafka Connect worker 需要記住三類資訊：
 
@@ -587,7 +587,7 @@ connect-status-hot-product-demo
 
 所以 worker 重啟後，可以從 Kafka 取回設定、進度與狀態。
 
-### 12.8 Delivery Semantics：資料會不會重複寫入
+### 12.8 重送：Delivery Semantics 說明重複寫入風險
 
 資料管線可能會重送資料。常見原因包含 worker 寫到一半失敗、網路短暫中斷、外部系統回應逾時。
 
