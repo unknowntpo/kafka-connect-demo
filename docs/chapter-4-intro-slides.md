@@ -593,7 +593,7 @@ just setup
 產生一組固定劇本的流量。此流程使用固定時間窗產生資料，因此每次執行會得到一致結果：
 
 ```bash
-just replay-demo
+just run-demo
 ```
 
 Dashboard：

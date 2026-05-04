@@ -51,8 +51,11 @@ inspect-topic topic="product.events" count="5":
 verify-sink:
     ./scripts/verify-sink.sh
 
-replay-demo:
+run-demo:
     ./scripts/replay-demo.sh
+
+replay-demo:
+    just run-demo
 
 setup: start wait topics search-resources connectors dashboard status
 

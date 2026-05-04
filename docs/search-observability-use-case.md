@@ -164,7 +164,7 @@ dashboards/hot-product-sales-observability.ndjson
 正式展示前建議使用單一重播入口：
 
 ```bash
-just replay-demo
+just run-demo
 ```
 
 這個腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並以固定時間窗產生相同資料集。
@@ -270,7 +270,7 @@ just run-basic
 如果本機 Kibana 或 Elasticsearch 回傳 HTTP 429，通常代表本機資源或 Docker disk 壓力過高。正式展示建議先執行：
 
 ```bash
-just replay-demo
+just run-demo
 ```
 
 產生較大的 dashboard 資料集：

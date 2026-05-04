@@ -74,7 +74,7 @@ Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson
 just dashboard
 ```
 
-`just replay-demo` 也會自動匯入這份 dashboard 定義，並把 dashboard time range 設定到固定 demo 時間窗。
+`just run-demo` 也會自動匯入這份 dashboard 定義，並把 dashboard time range 設定到固定 demo 時間窗。
 
 ## 投影片
 
@@ -115,7 +115,7 @@ just slides-build
 正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並用固定時間窗產生同一批資料：
 
 ```bash
-just replay-demo
+just run-demo
 ```
 
 Dashboard：

@@ -309,7 +309,7 @@ just setup
 產生一組固定劇本的流量：
 
 ```bash
-just replay-demo
+just run-demo
 ```
 
 Dashboard：

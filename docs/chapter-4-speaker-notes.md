@@ -5,7 +5,7 @@
 ## Demo 模式
 
 - 投影片中的 demo 是 deterministic replay，不是 wall-clock realtime animation。
-- 現場展示建議使用 `just replay-demo`，避免逐步指令漏掉清理步驟。
+- 現場展示建議使用 `just run-demo`，避免逐步指令漏掉清理步驟。
 - 如果聽眾問「為什麼不是即時流」，可以說明：Kafka Connect 持續消費 Kafka topic；本 demo 為了課堂可重複性，使用固定 event time 重播同一段流量。
 
 ## 用語界線
@@ -19,6 +19,6 @@
 
 1. 確認 Slidev：`just slides`
 2. 確認 Docker 空間：`docker system df`
-3. 重播 demo：`just replay-demo`
+3. 重播 demo：`just run-demo`
 4. 若 Kibana saved object 回 429，檢查 Elasticsearch flood-stage watermark，必要時清理 Docker disk 並解除 read-only block。
 5. 若需要完整驗證，執行 `just e2e`。
