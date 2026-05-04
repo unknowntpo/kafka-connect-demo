@@ -34,6 +34,7 @@ class HotProductEventGeneratorIT {
             "  \"profile_version\":\"ai-profile-v1\"," +
             "  \"campaign\":\"test-campaign\"," +
             "  \"total_events\":2000," +
+            "  \"participant_users\":800," +
             "  \"duration_seconds\":600," +
             "  \"inventory\":100," +
             "  \"time_skew_power\":2.8," +
@@ -138,6 +139,33 @@ class HotProductEventGeneratorIT {
         }
         assertTrue(failureReasonsSeen.size() > 0, "should observe at least one failure reason");
         assertTrue(soldOutReasonSeen, "post-sellout failures should be tagged COUPON_SOLD_OUT");
+    }
+
+    @Test
+    void runProfile_givesEveryParticipantAnEntryViewBeforeActions() throws Exception {
+        JsonNode profile = MAPPER.readTree(PROFILE_JSON);
+        MockProducer<String, String> producer = new MockProducer<>(true, new StringSerializer(), new StringSerializer());
+
+        HotProductEventGenerator.runProfile(testConfig(), profile, producer);
+
+        Set<String> viewedUsers = new HashSet<>();
+        Set<String> allUsers = new HashSet<>();
+        int viewCount = 0;
+        for (ProducerRecord<String, String> rec : producer.history()) {
+            JsonNode evt = MAPPER.readTree(rec.value());
+            String userId = evt.path("user_id").asText();
+            String eventType = evt.path("event_type").asText();
+            allUsers.add(userId);
+            if ("COUPON_VIEWED".equals(eventType)) {
+                viewedUsers.add(userId);
+                viewCount++;
+            } else {
+                assertTrue(viewedUsers.contains(userId), "non-view event must belong to a user that already viewed the campaign page: " + userId);
+            }
+        }
+
+        assertEquals(800, viewCount, "participant_users should produce one entry view per participant");
+        assertEquals(allUsers, viewedUsers, "every active user should have a COUPON_VIEWED entry event");
     }
 
     @Test

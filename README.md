@@ -150,7 +150,7 @@ just seed-dashboard
 just seed-ai
 ```
 
-這個腳本會使用 [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) 產生 `24,000` 筆事件，並透過 [scripts/score-load-profile.sh](scripts/score-load-profile.sh) 查詢 Elasticsearch 進行評分。設計說明在 [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md)。
+這個腳本會使用 [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) 產生 `24,000` 筆事件，並透過 [scripts/score-load-profile.sh](scripts/score-load-profile.sh) 查詢 Elasticsearch 進行評分。profile 會先為每個 participant 產生一筆 `COUPON_VIEWED`，再產生重新整理、等候室與領券結果等後續行為。設計說明在 [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md)。
 
 seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。事件預設會從執行當下開始產生，dashboard time range 也會自動對齊這次產生的事件時間窗；若需要固定時間重現，可手動設定 `BASE_TIME` 或 `EVENT_START_TIME`。
 

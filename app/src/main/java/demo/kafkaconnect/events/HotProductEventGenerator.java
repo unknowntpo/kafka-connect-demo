@@ -63,12 +63,19 @@ public final class HotProductEventGenerator {
         long profileEndMillis = config.baseTime == null ? System.currentTimeMillis() : Instant.parse(config.baseTime).toEpochMilli();
         long baseMillis = profileEndMillis - durationMillis;
         double timeSkewPower = doubleValue(profile, "time_skew_power", 2.0d);
+        int participantUsers = Math.max(0, Math.min(totalEvents, intValue(profile, "participant_users", 0)));
+        boolean userJourneyMode = participantUsers > 0;
         int remainingInventory = inventory;
 
         for (int i = 0; i < totalEvents; i++) {
             double progress = (double) i / (double) totalEvents;
             JsonNode phase = findPhaseForProgress(profile.path("phases"), progress);
-            String eventType = chooseProfileEventType(phase, remainingInventory, random);
+            boolean entryView = userJourneyMode && i < participantUsers;
+            String eventType = entryView ? "COUPON_VIEWED" : chooseProfileEventType(phase, remainingInventory, random);
+            if (userJourneyMode && !entryView && "COUPON_VIEWED".equals(eventType)) {
+                eventType = "PAGE_REFRESHED";
+            }
+            String userId = userJourneyMode ? profileParticipantUserId(random, participantUsers, i, entryView) : profileUserId(random, phase);
             int beforeInventory = remainingInventory;
             if (isSuccessEvent(eventType) && remainingInventory <= 0) {
                 eventType = failureEventName(profile);
@@ -77,7 +84,7 @@ public final class HotProductEventGenerator {
                 remainingInventory = Math.max(0, remainingInventory - 1);
             }
 
-            Map<String, Object> event = buildProfileEvent(profile, phase, eventType, i, beforeInventory, remainingInventory, baseMillis, durationMillis, progress, timeSkewPower, random);
+            Map<String, Object> event = buildProfileEvent(profile, phase, eventType, userId, i, beforeInventory, remainingInventory, baseMillis, durationMillis, progress, timeSkewPower, random);
             String eventId = (String) event.get("event_id");
             producer.send(new ProducerRecord<String, String>(config.topic, eventId, MAPPER.writeValueAsString(event)));
 
@@ -91,6 +98,7 @@ public final class HotProductEventGenerator {
             JsonNode profile,
             JsonNode phase,
             String eventType,
+            String userId,
             int sequence,
             int inventoryBefore,
             int inventoryAfter,
@@ -114,7 +122,7 @@ public final class HotProductEventGenerator {
         event.put("coupon_name", entity.path("coupon_name").asText("Flash Sale Coupon"));
         event.put("scenario", profile.path("scenario").asText("ai-powered-load"));
         event.put("phase", phase.path("name").asText("unknown"));
-        event.put("user_id", profileUserId(random, phase));
+        event.put("user_id", userId);
         event.put("session_id", "sess_" + Integer.toHexString(random.nextInt()));
         event.put("occurred_at", Instant.ofEpochMilli(occurredAtMillis).toString());
         event.put("service", profileServiceFor(eventType));
@@ -211,6 +219,11 @@ public final class HotProductEventGenerator {
     private static String profileUserId(Random random, JsonNode phase) {
         int activeUsers = intValue(phase, "active_users", 8000);
         return "user_" + String.format("%05d", random.nextInt(Math.max(1, activeUsers)) + 1);
+    }
+
+    private static String profileParticipantUserId(Random random, int participantUsers, int sequence, boolean entryView) {
+        int userNumber = entryView ? sequence + 1 : random.nextInt(Math.max(1, participantUsers)) + 1;
+        return "user_" + String.format("%05d", userNumber);
     }
 
     private static String profileServiceFor(String eventType) {

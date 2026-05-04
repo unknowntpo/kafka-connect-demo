@@ -1,8 +1,9 @@
 {
   "scenario": "flash-sale-coupon",
-  "profile_version": "ai-profile-v1",
+  "profile_version": "ai-profile-v2",
   "campaign": "may-day-coupon-drop",
   "total_events": 24000,
+  "participant_users": 12000,
   "duration_seconds": 4800,
   "inventory": 1200,
   "time_skew_power": 2.8,
@@ -21,9 +22,8 @@
       "end": 0.18,
       "active_users": 5000,
       "event_weights": {
-        "COUPON_VIEWED": 55,
-        "PAGE_REFRESHED": 30,
-        "WAITING_ROOM_JOINED": 10,
+        "PAGE_REFRESHED": 75,
+        "WAITING_ROOM_JOINED": 20,
         "COUPON_CLAIM_SUCCEEDED": 5
       },
       "failure_weights": {
@@ -37,9 +37,8 @@
       "end": 0.42,
       "active_users": 12000,
       "event_weights": {
-        "PAGE_REFRESHED": 50,
+        "PAGE_REFRESHED": 65,
         "WAITING_ROOM_JOINED": 25,
-        "COUPON_VIEWED": 15,
         "COUPON_CLAIM_SUCCEEDED": 10
       },
       "failure_weights": {
@@ -53,11 +52,10 @@
       "end": 0.7,
       "active_users": 22000,
       "event_weights": {
-        "PAGE_REFRESHED": 35,
-        "COUPON_CLAIM_SUCCEEDED": 28,
+        "PAGE_REFRESHED": 40,
+        "COUPON_CLAIM_SUCCEEDED": 30,
         "WAITING_ROOM_JOINED": 20,
-        "COUPON_VIEWED": 12,
-        "COUPON_CLAIM_FAILED": 5
+        "COUPON_CLAIM_FAILED": 10
       },
       "failure_weights": {
         "RATE_LIMITED": 70,
@@ -70,16 +68,14 @@
       "end": 1.0,
       "active_users": 26000,
       "event_weights": {
-        "PAGE_REFRESHED": 38,
-        "COUPON_CLAIM_FAILED": 32,
-        "WAITING_ROOM_JOINED": 20,
-        "COUPON_VIEWED": 10
+        "PAGE_REFRESHED": 50,
+        "COUPON_CLAIM_FAILED": 40,
+        "WAITING_ROOM_JOINED": 10
       },
       "sold_out_event_weights": {
-        "PAGE_REFRESHED": 42,
-        "COUPON_CLAIM_FAILED": 38,
-        "WAITING_ROOM_JOINED": 15,
-        "COUPON_VIEWED": 5
+        "PAGE_REFRESHED": 52,
+        "COUPON_CLAIM_FAILED": 43,
+        "WAITING_ROOM_JOINED": 5
       },
       "failure_weights": {
         "COUPON_SOLD_OUT": 88,

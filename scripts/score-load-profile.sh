@@ -30,9 +30,15 @@ cat >"$query_file" <<JSON
   },
   "aggs": {
     "event_types": { "terms": { "field": "event_type", "size": 20 } },
+    "coupon_viewed_users": {
+      "filter": { "term": { "event_type": "COUPON_VIEWED" } },
+      "aggs": {
+        "users": { "terms": { "field": "user_id", "size": 40000 } }
+      }
+    },
     "failure_reasons": { "terms": { "field": "failure_reason", "size": 20 } },
     "phases": { "terms": { "field": "phase", "size": 10 } },
-    "unique_users": { "cardinality": { "field": "user_id" } },
+    "all_users": { "terms": { "field": "user_id", "size": 40000 } },
     "top_users": { "terms": { "field": "user_id", "size": 1 } },
     "min_inventory": { "min": { "field": "remaining_coupons" } },
     "pipeline_docs": { "filter": { "term": { "pipeline": "connect-search-demo" } } },
@@ -71,10 +77,11 @@ jq --arg scenario "$SCENARIO" '
   | bucket_count("WAITING_ROOM_JOINED") as $waiting
   | bucket_count("COUPON_CLAIM_SUCCEEDED") as $successes
   | bucket_count("COUPON_CLAIM_FAILED") as $failures
+  | (.aggregations.coupon_viewed_users.users.buckets | length) as $view_users
   | reason_count("COUPON_SOLD_OUT") as $sold_out
   | range_count("first_30m") as $first
   | range_count("last_30m") as $last
-  | (.aggregations.unique_users.value // 0) as $unique_users
+  | (.aggregations.all_users.buckets | length) as $unique_users
   | ((.aggregations.top_users.buckets[0].doc_count // 0) / (if $total == 0 then 1 else $total end)) as $top_user_share
   | (.aggregations.min_inventory.value // 999999) as $min_inventory
   | (.aggregations.pipeline_docs.doc_count // 0) as $pipeline_docs
@@ -86,7 +93,7 @@ jq --arg scenario "$SCENARIO" '
         + score($refreshes > $successes and $waiting > 0 and $views > 0; 15)
         + score($successes >= 1000 and $min_inventory == 0; 20)
         + score($failures > $successes and $sold_out > ($failures * 0.6); 15)
-        + score($unique_users >= 8000 and $top_user_share < 0.01; 5)
+        + score($unique_users >= 8000 and $view_users >= $unique_users and $top_user_share < 0.01; 5)
         + score($pipeline_docs == $total and $region_docs == $total; 5)
       ),
       scenario: $scenario,
@@ -104,6 +111,8 @@ jq --arg scenario "$SCENARIO" '
       failure_reasons: (.aggregations.failure_reasons.buckets | map({key, count: .doc_count})),
       min_remaining_coupons: $min_inventory,
       unique_users: $unique_users,
+      coupon_viewed_users: $view_users,
+      all_users_viewed: ($view_users >= $unique_users),
       top_user_share: (($top_user_share * 10000 | round) / 10000),
       pipeline_docs: $pipeline_docs,
       region_docs: $region_docs,
@@ -115,6 +124,7 @@ jq --arg scenario "$SCENARIO" '
         and $min_inventory == 0
         and $failures > $successes
         and $sold_out > ($failures * 0.6)
+        and $view_users >= $unique_users
         and $pipeline_docs == $total
         and $region_docs == $total
       ) then "pass" else "needs_adjustment" end)
