@@ -439,7 +439,15 @@ Kafka bytes
 ConnectRecord
 ```
 
-這條 pipeline 使用 schemaless JSON，也就是不附帶 schema 定義的 JSON。JSON event 容易直接觀察，Kibana 也能直接看到欄位。Production 環境通常還需要明確的 schema 與相容性規則。
+這條 pipeline 在 connector config 明確指定 `JsonConverter`，並關閉 schema envelope：
+
+```text
+key.converter=org.apache.kafka.connect.storage.StringConverter
+value.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter.schemas.enable=false
+```
+
+這代表這條 Elasticsearch sink pipeline 自己宣告要讀取 schemaless JSON，而不只依賴 worker 預設。JSON event 容易直接觀察，Kibana 也能直接看到欄位；如果未來另一條 pipeline 改用 Avro 或 Protobuf，可以在那條 connector config 使用不同 converter。
 
 ### 12.4 格式：SMT 對單筆 record 做輕量轉換
 

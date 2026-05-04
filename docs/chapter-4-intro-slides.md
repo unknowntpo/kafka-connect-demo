@@ -766,15 +766,18 @@ Kafka bytes
 ConnectRecord
 ```
 
-此 demo 使用 schemaless JSON。
+此 demo 在 connector config 明確指定 `JsonConverter`。
 
-schemaless JSON 指的是不附帶 schema 定義的 JSON。
+```text
+value.converter = JsonConverter
+value.converter.schemas.enable = false
+```
 
 此處的設計取捨：
 
-- JSON event 容易直接觀察。
+- schemaless JSON 容易直接觀察。
 - Kibana 可以直接看到欄位。
-- production 通常還需要明確的 schema 與相容性規則。
+- 多條 pipeline 可以各自設定 converter。
 
 ---
 
