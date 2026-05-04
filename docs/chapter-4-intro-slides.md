@@ -450,11 +450,12 @@ product.events
 
 ---
 
-# Kafka 的第二個角色：緩衝與重放
+# Kafka 的第二個角色：緩衝、重試與重放
 
-Kafka 提供兩個重要能力：
+Kafka 提供三個重要能力：
 
 - buffering：後面的系統變慢時，事件仍可先保留在 Kafka。
+- producer retry：暫時性送出失敗時，Producer client 可以重試。
 - replay：後面的系統需要重建資料時，可以重新讀 topic。
 
 因此，application 與觀測系統不需要同步綁在一起。

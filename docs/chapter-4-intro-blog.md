@@ -232,9 +232,10 @@ topic = 一條有名字的事件流
 product.events
 ```
 
-Kafka 提供兩個重要能力：
+Kafka 提供三個重要能力：
 
 - buffering：後面的系統變慢時，事件仍可先保留在 Kafka。
+- producer retry：Producer client 遇到暫時性送出失敗時，可以在送達期限內重試；此 demo 另外設定 `acks=all`，要求 broker 確認寫入。
 - replay：後面的系統需要重建資料時，可以重新讀 topic。
 
 因此，application 與觀測系統可以用 Kafka 解耦。Kafka 先保存事件，再由後續系統依各自速度消費。
