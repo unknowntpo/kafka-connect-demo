@@ -136,9 +136,9 @@ Dashboard 應該呈現下列趨勢：
 
 - Metric：已索引事件總數。
 - Line chart：依 `event_type` 切分的事件量趨勢。
-- Table：關鍵行為統計，例如成功、失敗與頁面重新整理。這是 filter count，不代表完整轉換率。
+- Table：行為統計，列出五種事件類型的事件數；總計應與事件總數一致。
 - Table：`failure_reason`，用來觀察售罄或限流。
-- Table：依 `user_id` 統計的高頻操作線索，只看頁面重新整理與領券失敗等高頻操作事件。
+- Table：依 `user_id` 統計的高頻操作線索，只看短時間內容易重複出現的頁面重新整理與領券失敗事件。這是排查線索，不代表 bot 偵測。
 - Table：依 `metadata_region` 統計的地區流量。`metadata_region` 由 Kafka Connect `Flatten` SMT 從巢狀 `metadata.region` 展平而來。
 
 建立 dashboard：

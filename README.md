@@ -216,9 +216,9 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 
 - 已索引事件總數
 - 依 `event_type` 切分的事件量趨勢
-- 關鍵行為統計：成功、失敗、頁面重新整理。這是 filter count，不代表完整轉換率。
+- 行為統計：五種事件類型的事件數，總計應與事件總數一致。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
-- 高頻操作線索，用來觀察反覆重新整理或搶購失敗是否集中於少數使用者
+- 高頻操作線索，用來觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者；這是排查線索，不代表 bot 偵測。
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
 
 ## E2E 驗證

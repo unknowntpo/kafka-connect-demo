@@ -13,7 +13,7 @@
 - 不要說「Elasticsearch 不能承受 indexing」。較精確的說法是：application 層不應同步承擔搜尋與觀測寫入責任。
 - 不要說「Kafka Connect 保證 exactly-once」。本 demo 以 at-least-once 理解，並用穩定 `event_id` 作為 Elasticsearch document id 降低重送影響。
 - 不要把「高頻操作線索」直接稱為 bot 偵測。現有資料產生器沒有建立明確 bot cohort，因此只能說它提供排查線索。
-- `關鍵行為統計` 是 filter count，不是完整 funnel 或 conversion rate。
+- `行為統計` 是五種 event type 的 filter count；加總應等於事件總數，但不是完整 funnel 或 conversion rate。
 
 ## 現場檢查順序
 
