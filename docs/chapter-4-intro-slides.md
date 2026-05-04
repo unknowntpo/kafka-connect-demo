@@ -342,7 +342,7 @@ Elasticsearch 適合承擔三種工作：
 在這個 demo 中，Elasticsearch index 可以想成：
 
 ```text
-為事件查詢與 dashboard 準備好的資料表
+讓事件能被快速搜尋與聚合的索引
 ```
 
 新的問題是：

@@ -173,7 +173,7 @@ Elasticsearch 適合承擔三種工作：
 - 查詢事件
 - 聚合與統計
 
-在這個 demo 中，Elasticsearch index 可以想成「為事件查詢與 dashboard 準備好的資料表」。
+在這個 demo 中，Elasticsearch index 可以想成「讓事件能被快速搜尋與聚合的索引」。
 
 因此，Elasticsearch 可以作為觀測查詢系統。新的問題是：事件要怎麼從 application 穩定進入 Elasticsearch？
 
