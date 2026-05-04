@@ -195,7 +195,7 @@ metadata.region
 | 欄位 | 範例值 | 支援的指標 |
 | --- | --- | --- |
 | `event_type` | `PAGE_REFRESHED` | 事件類型 |
-| `occurred_at` | `2026-05-01T20:00:15Z` | 每分鐘流量 |
+| `occurred_at` | `run_started_at + 15s` | 每分鐘流量 |
 | `user_id` | `user_01883` | 高頻操作線索 |
 | `coupon_id` | `coupon_may_sale` | 指定折價券觀測 |
 | `remaining_coupons` | `0` | 售罄壓力 |
@@ -590,7 +590,7 @@ layout: section
 just setup
 ```
 
-產生一組固定劇本的流量。此流程使用固定時間窗產生資料，因此每次執行會得到一致結果：
+產生一組固定劇本的流量。事件開始時間會對齊執行當下，因此打開 dashboard 時比較容易定位：
 
 ```bash
 just run-demo
@@ -609,13 +609,11 @@ http://localhost:5601/app/dashboards
 這個 demo 採用可重播模式：
 
 - 每次先清理上一輪 demo 狀態。
-- 使用固定 `BASE_TIME=2026-05-01T12:00:00Z`。
+- 使用執行當下作為事件開始時間。
 - 重新產生 24,000 筆折價券搶領事件。
-- Dashboard time range 會對齊固定事件時間窗。
+- Dashboard time range 會對齊這次產生的事件時間窗。
 
-因此，這條流程能穩定呈現 Kafka Connect pipeline 與 dashboard 結果。
-
-它採用固定時間窗，重點是可重跑與結果一致。
+因此，資料會落在目前時間附近，事件數、比例與波形仍由固定 seed 與 profile 控制。
 
 ---
 
@@ -728,7 +726,7 @@ Dashboard 要回答什麼問題，event 就必須包含對應欄位。
   "event_type": "COUPON_CLAIM_FAILED",
   "coupon_id": "coupon_mayday_001",
   "user_id": "user_01234",
-  "occurred_at": "2026-05-01T12:00:00Z",
+  "occurred_at": "<run_started_at + 15s>",
   "remaining_coupons": 0,
   "failure_reason": "COUPON_SOLD_OUT",
   "metadata": {
@@ -1116,13 +1114,13 @@ Demo seed scripts 預設會清理：
 - Kafka Connect internal topics
 - Elasticsearch index
 
-並使用固定時間：
+事件開始時間預設對齊執行當下：
 
 ```text
-BASE_TIME=2026-05-01T12:00:00Z
+EVENT_START_TIME=<current UTC time>
 ```
 
-因此每次重播都能得到一致的 dashboard 結果。
+因此每次重播都能在目前時間附近看到一致的 dashboard 結果。
 
 E2E 驗證：
 

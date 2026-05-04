@@ -8,15 +8,6 @@ GRADLE_DOCKER_NETWORK="${GRADLE_DOCKER_NETWORK:-kafka-connect-demo_default}"
 SEED="${SEED:-20260430}"
 MALFORMED_RATIO="${MALFORMED_RATIO:-0}"
 RESET_STATE="${RESET_STATE:-1}"
-BASE_TIME="${BASE_TIME:-2026-05-01T12:00:00Z}"
-DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-2026-05-01T10:30:00Z}"
-DASHBOARD_TIME_TO="${DASHBOARD_TIME_TO:-2026-05-01T12:05:00Z}"
-FIRST_FROM="${FIRST_FROM:-2026-05-01T10:30:00Z}"
-FIRST_TO="${FIRST_TO:-2026-05-01T11:00:00Z}"
-MIDDLE_FROM="${MIDDLE_FROM:-2026-05-01T11:00:00Z}"
-MIDDLE_TO="${MIDDLE_TO:-2026-05-01T11:30:00Z}"
-LAST_FROM="${LAST_FROM:-2026-05-01T11:30:00Z}"
-LAST_TO="${LAST_TO:-2026-05-01T12:05:00Z}"
 
 cd "$ROOT_DIR"
 
@@ -26,6 +17,8 @@ if [[ ! -f "$PROFILE" ]]; then
 fi
 
 expected_events="$(jq -r '.total_events' "$PROFILE")"
+duration_seconds="$(jq -r '.duration_seconds' "$PROFILE")"
+eval "$(DEMO_DURATION_SECONDS="$duration_seconds" "$ROOT_DIR/scripts/resolve-demo-time-window.py")"
 
 if [[ "$RESET_STATE" == "1" ]]; then
   "$ROOT_DIR/scripts/clean-demo-state.sh"
@@ -37,7 +30,8 @@ fi
 DASHBOARD_TIME_FROM="$DASHBOARD_TIME_FROM" DASHBOARD_TIME_TO="$DASHBOARD_TIME_TO" "$ROOT_DIR/scripts/create-kibana-dashboard.sh"
 
 echo "Generating $expected_events events from AI load profile: $PROFILE"
-echo "Using deterministic base time: $BASE_TIME"
+echo "Using event start time: $EVENT_START_TIME"
+echo "Using profile end time: $BASE_TIME"
 
 GRADLE_DOCKER_NETWORK="$GRADLE_DOCKER_NETWORK" KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --profile=/workspace/$PROFILE --seed=$SEED --base-time=$BASE_TIME --malformed-ratio=$MALFORMED_RATIO"

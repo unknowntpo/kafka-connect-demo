@@ -104,7 +104,7 @@ metadata.region
 | 欄位 | 範例值 | 支援的指標 | 用途 |
 | --- | --- | --- | --- |
 | `event_type` | `PAGE_REFRESHED`, `COUPON_CLAIM_FAILED` | 事件類型、熱門商品行為統計 | 區分瀏覽、重新整理、排隊、成功、失敗等事件 |
-| `occurred_at` | `2026-05-01T20:00:15Z` | 每分鐘流量、時間序列統計 | 把事件放到時間軸上，才能做每分鐘或每段時間統計 |
+| `occurred_at` | `run_started_at + 15s` | 每分鐘流量、時間序列統計 | 把事件放到時間軸上，才能做每分鐘或每段時間統計 |
 | `user_id` | `user_01883` | 高頻操作線索 | 找出是否有少數使用者短時間內反覆重新整理頁面或多次領券失敗 |
 | `coupon_id` | `coupon_may_sale` | 指定折價券觀測 | 確認觀察的是哪張折價券 |
 | `remaining_coupons` | `42`, `0` | 售罄壓力、成功與失敗比例 | 判斷失敗是否和折價券數量耗盡有關 |
@@ -321,11 +321,11 @@ http://localhost:5601/app/dashboards
 這個 demo 採用可重播模式：
 
 - 每次先清理上一輪 demo 狀態。
-- 使用固定 `BASE_TIME=2026-05-01T12:00:00Z`。
+- 使用執行當下作為事件開始時間。
 - 重新產生 24,000 筆折價券搶領事件。
-- Dashboard time range 會對齊固定事件時間窗。
+- Dashboard time range 會對齊這次產生的事件時間窗。
 
-因此，每次執行都能得到一致的 dashboard 結果。
+因此，每次執行都會落在目前時間附近，事件數、比例與波形仍由固定 seed 與 profile 控制。
 
 ## 11. Demo Panel 與健康狀態
 
@@ -409,7 +409,7 @@ Dashboard 要回答什麼問題，event 就必須包含對應欄位。
   "event_type": "COUPON_CLAIM_FAILED",
   "coupon_id": "coupon_mayday_001",
   "user_id": "user_01234",
-  "occurred_at": "2026-05-01T12:00:00Z",
+  "occurred_at": "<run_started_at + 15s>",
   "remaining_coupons": 0,
   "failure_reason": "COUPON_SOLD_OUT",
   "metadata": {
@@ -481,7 +481,7 @@ InsertField:
   "event_id": "evt_001",
   "event_type": "PAGE_REFRESHED",
   "coupon_id": "coupon_mayday_001",
-  "occurred_at": "2026-05-01T20:00:15Z",
+  "occurred_at": "<run_started_at + 15s>",
   "metadata": {
     "region": "TW-NORTH"
   }
@@ -495,7 +495,7 @@ InsertField:
   "event_id": "evt_001",
   "event_type": "PAGE_REFRESHED",
   "coupon_id": "coupon_mayday_001",
-  "occurred_at": "2026-05-01T20:00:15Z",
+  "occurred_at": "<run_started_at + 15s>",
   "metadata_region": "TW-NORTH",
   "pipeline": "connect-search-demo"
 }

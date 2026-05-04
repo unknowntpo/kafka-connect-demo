@@ -4,9 +4,9 @@
 
 ## Demo 模式
 
-- 投影片中的 demo 是 deterministic replay，不是 wall-clock realtime animation。
+- 投影片中的 demo 是 deterministic replay，不是逐秒播放的 realtime animation。
 - 現場展示建議使用 `just run-demo`，避免逐步指令漏掉清理步驟。
-- 如果聽眾問「為什麼不是即時流」，可以說明：Kafka Connect 持續消費 Kafka topic；本 demo 為了課堂可重複性，使用固定 event time 重播同一段流量。
+- 如果聽眾問「為什麼不是即時流」，可以說明：Kafka Connect 持續消費 Kafka topic；本 demo 為了課堂可重複性，使用固定 seed 重播同一段流量，事件開始時間則對齊執行當下。
 
 ## 用語界線
 

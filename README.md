@@ -112,7 +112,7 @@ just slides-build
 
 ## 快速開始
 
-正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並用固定時間窗產生同一批資料：
+正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並從執行當下開始產生同一批劇本資料：
 
 ```bash
 just run-demo
@@ -152,7 +152,7 @@ just seed-ai
 
 這個腳本會使用 [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) 產生 `24,000` 筆事件，並透過 [scripts/score-load-profile.sh](scripts/score-load-profile.sh) 查詢 Elasticsearch 進行評分。設計說明在 [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md)。
 
-seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。腳本也使用固定的預設 base time：`2026-05-01T12:00:00Z`，因此每次重跑會得到相同的 dashboard 時間窗與聚合結果。
+seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。事件預設會從執行當下開始產生，dashboard time range 也會自動對齊這次產生的事件時間窗；若需要固定時間重現，可手動設定 `BASE_TIME` 或 `EVENT_START_TIME`。
 
 查看 Kafka topic：
 
@@ -198,7 +198,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
   "coupon_id": "coupon_may_sale",
   "user_id": "user_0042",
   "session_id": "sess_abcd",
-  "occurred_at": "2026-05-01T20:00:15Z",
+  "occurred_at": "run_started_at + 15s",
   "service": "coupon-service",
   "severity": "WARN",
   "remaining_coupons": 0,

@@ -167,7 +167,7 @@ dashboards/hot-product-sales-observability.ndjson
 just run-demo
 ```
 
-這個腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並以固定時間窗產生相同資料集。
+這個腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並從執行當下開始產生相同劇本的資料集。
 
 ## 事件模型
 
@@ -201,7 +201,7 @@ COUPON_CLAIM_FAILED
   "product_name": "Limited Edition Keyboard",
   "user_id": "user_0042",
   "session_id": "sess_abcd",
-  "occurred_at": "2026-04-29T10:00:00Z",
+  "occurred_at": "<run_started_at + 15s>",
   "service": "web",
   "severity": "INFO",
   "remaining_stock": 42,
@@ -374,10 +374,10 @@ cleanup 會移除：
 
 這樣重跑 demo 時，不會混入前一次執行留下的 connector offsets、topic contents 或 indexed documents。
 
-seed scripts 也預設使用 deterministic event time：
+seed scripts 預設會把事件開始時間對齊執行當下：
 
 ```text
-BASE_TIME=2026-05-01T12:00:00Z
+EVENT_START_TIME=<current UTC time>
 ```
 
-Kibana dashboard time range 會在 seeding 時設定到產生資料的時間窗，因此每次重跑都會得到相同的 event counts、trend buckets 與 region/failure distributions。
+Kibana dashboard time range 會在 seeding 時設定到產生資料的時間窗，因此 demo 資料會落在目前時間附近。事件內容、比例與波形仍由固定 seed 與 profile 控制；需要完全固定時間時，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。

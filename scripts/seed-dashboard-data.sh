@@ -10,9 +10,7 @@ INITIAL_STOCK="${INITIAL_STOCK:-900}"
 SEED="${SEED:-20260429}"
 MALFORMED_RATIO="${MALFORMED_RATIO:-0}"
 RESET_STATE="${RESET_STATE:-1}"
-BASE_TIME="${BASE_TIME:-2026-05-01T12:00:00Z}"
-DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-2026-05-01T10:30:00Z}"
-DASHBOARD_TIME_TO="${DASHBOARD_TIME_TO:-2026-05-01T12:05:00Z}"
+eval "$(DEMO_DURATION_SECONDS="$DURATION_SECONDS" "$ROOT_DIR/scripts/resolve-demo-time-window.py")"
 
 wait_for_index_count() {
   local expected="$1"
@@ -42,8 +40,9 @@ fi
 DASHBOARD_TIME_FROM="$DASHBOARD_TIME_FROM" DASHBOARD_TIME_TO="$DASHBOARD_TIME_TO" "$ROOT_DIR/scripts/create-kibana-dashboard.sh"
 
 total_events=$((RATE_PER_SECOND * DURATION_SECONDS))
-echo "Generating $total_events hot-product events across the last $DURATION_SECONDS seconds..."
-echo "Using deterministic base time: $BASE_TIME"
+echo "Generating $total_events hot-product events across $DURATION_SECONDS seconds from the event start time..."
+echo "Using event start time: $EVENT_START_TIME"
+echo "Using profile end time: $BASE_TIME"
 
 GRADLE_DOCKER_NETWORK="$GRADLE_DOCKER_NETWORK" KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=$RATE_PER_SECOND --duration-seconds=$DURATION_SECONDS --initial-stock=$INITIAL_STOCK --seed=$SEED --base-time=$BASE_TIME --malformed-ratio=$MALFORMED_RATIO"
