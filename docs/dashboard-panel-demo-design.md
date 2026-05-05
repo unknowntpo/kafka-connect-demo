@@ -45,7 +45,7 @@ Kafka Connect REST API 與 connector config 只在需要時展示。它的角色
 
 | Panel | 它回答的問題 | 需要的欄位 | 帶出的 Kafka Connect 知識點 |
 |---|---|---|---|
-| Demo 導覽 - 事件旅行路線 | 這些圖表的資料從哪裡來？ | 無 | Kafka Connect 是 Kafka 與 Elasticsearch 之間的橋 |
+| Demo 導覽 - 事件旅行路線 | 這些圖表的資料從哪裡來？ | 無 | Kafka Connect 是 Kafka 與 Elasticsearch 之間的橋樑 |
 | 事件明細 - Elasticsearch 文件 | 圖表背後的 document 長什麼樣子？ | `event_id`, `event_type`, `metadata_region`, `pipeline` | SMT 後的資料形狀、`pipeline` 來源標記 |
 | 事件類型趨勢 | 每分鐘不同使用者行為如何變化？ | `occurred_at`, `event_type` | Elasticsearch 聚合來自 Kafka Connect 寫入的欄位 |
 | 事件總數 | Kafka Connect 是否已經把事件寫進 Elasticsearch？ | 任一 document | Sink connector 寫入結果、資料是否到達下游 |
