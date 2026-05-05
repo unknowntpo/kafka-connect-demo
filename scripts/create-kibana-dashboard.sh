@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KIBANA_URL="${KIBANA_URL:-http://localhost:5601}"
 DASHBOARD_ID="hot-product-sales-dashboard"
 DASHBOARD_DEFINITION="${DASHBOARD_DEFINITION:-$ROOT_DIR/dashboards/hot-product-sales-observability.ndjson}"
-DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-now-90m}"
+DASHBOARD_TIME_FROM="${DASHBOARD_TIME_FROM:-now-3h}"
 DASHBOARD_TIME_TO="${DASHBOARD_TIME_TO:-now}"
 DASHBOARD_URL="$KIBANA_URL/app/dashboards#/view/$DASHBOARD_ID?_g=(filters:!(),refreshInterval:(pause:!f,value:5000),time:(from:'$DASHBOARD_TIME_FROM',to:'$DASHBOARD_TIME_TO'))"
 

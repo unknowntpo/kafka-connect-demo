@@ -321,11 +321,11 @@ http://localhost:5601/app/dashboards
 這個 demo 採用可重播模式：
 
 - 每次先清理上一輪 demo 狀態。
-- 使用執行當下作為事件開始時間。
+- 讓事件結束於執行當下。
 - 重新產生 24,000 筆折價券搶領事件。
-- Dashboard time range 會對齊這次產生的事件時間窗。
+- Dashboard time range 會設定為 demo 結束時間往前 3 小時到 demo 結束時間。
 
-因此，每次執行都會落在目前時間附近，事件數、比例與波形仍由固定 seed 與 profile 控制。
+因此，每次執行都會落在目前時間之前，事件數、比例與波形仍由固定 seed 與 profile 控制。
 
 ## 11. Demo Panel 與健康狀態
 

@@ -100,13 +100,13 @@ cleanup 會移除：
 - Kafka Connect internal topics
 - Elasticsearch index
 
-內建 flash-sale profile 預設使用執行當下作為事件開始時間：
+內建 flash-sale profile 預設讓事件結束於執行當下：
 
 ```text
-EVENT_START_TIME=<current UTC time>
+BASE_TIME=<current UTC time>
 ```
 
-因此重跑時資料會落在目前時間附近，打開 dashboard 時比較容易定位。事件內容、比例與波形仍由固定 seed 與 profile 控制；若需要完全固定時間，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。
+因此重跑時資料會完整落在目前時間之前，打開 dashboard 的 `now-3h` 到 `now` 時間窗就能看到整段事件。事件內容、比例與波形仍由固定 seed 與 profile 控制；若需要完全固定時間，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。
 
 ## 擴充方式
 

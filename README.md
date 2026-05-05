@@ -75,7 +75,7 @@ Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson
 
 - data views：`product-events`、`product-events-dlq`
 - 9 個 visualization panels
-- 2 個 Elasticsearch 文件明細 search panels：正常事件文件與 DLQ 原始文件
+- 2 個 Elasticsearch 文件明細 search panels：正常事件文件與 DLQ raw doc
 - dashboard layout 與 references
 
 建立或覆蓋 dashboard：
@@ -84,7 +84,7 @@ Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson
 just dashboard
 ```
 
-`just run-demo` 也會自動匯入這份 dashboard 定義，並把 dashboard time range 設定到固定 demo 時間窗。
+`just run-demo` 也會自動匯入這份 dashboard 定義，並把 dashboard time range 設定到 demo 結束時間往前 3 小時。
 
 ## 投影片
 
@@ -122,7 +122,7 @@ just slides-build
 
 ## 快速開始
 
-正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並從執行當下開始產生同一批劇本資料：
+正式展示或課堂 demo 建議使用單一重播入口。此腳本會啟動 Docker Compose stack、清理上一輪狀態、重新建立 connector/topic/index/dashboard，並產生一批結束於執行當下的劇本資料：
 
 ```bash
 just run-demo
@@ -134,7 +134,7 @@ Dashboard：
 使用 `just run-demo` 最後印出的 Dashboard URL。
 ```
 
-這個 URL 會帶入本輪資料的絕對時間窗。如果改成 Kibana 的 `Last 15 minutes`、`Last 1 hour` 這類相對時間，可能只看到部分事件。
+這個 URL 會帶入本輪資料的絕對時間窗，預設從 demo 結束時間往前 3 小時開始，結束於 demo 產生資料的當下。若改成 Kibana 的 `Last 15 minutes`、`Last 1 hour` 這類較短時間，可能只看到部分事件。
 
 如果需要逐步觀察各元件啟動流程，可以改用下列指令：
 
@@ -164,7 +164,7 @@ just seed-ai
 
 這個腳本會使用 [profiles/flash-sale-coupon.json](profiles/flash-sale-coupon.json) 產生 `24,000` 筆事件，並透過 [scripts/score-load-profile.sh](scripts/score-load-profile.sh) 查詢 Elasticsearch 進行評分。profile 會先為每個 participant 產生一筆 `COUPON_VIEWED`，再產生重新整理、等候室與領券結果等後續行為。設計說明在 [docs/ai-powered-load-generator.md](docs/ai-powered-load-generator.md)。
 
-seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。事件預設會從執行當下開始產生，dashboard time range 也會自動對齊這次產生的事件時間窗；若需要固定時間重現，可手動設定 `BASE_TIME` 或 `EVENT_START_TIME`。
+seed 腳本預設是隔離且可重跑的。產生資料前會清除 connector、Kafka data topics、Kafka Connect internal topics 與 Elasticsearch index，避免繼承上一次執行的狀態。事件預設會結束於執行當下，dashboard time range 預設為 demo 結束時間往前 3 小時到 demo 結束時間；若需要固定時間重現，可手動設定 `BASE_TIME` 或 `EVENT_START_TIME`。
 
 查看 Kafka topic：
 
@@ -229,8 +229,8 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 已索引事件總數
 - 依 `event_type` 切分的事件量趨勢
 - 熱門商品行為統計：五種事件類型的事件數，總計應與事件總數一致。
-- DLQ 壞資料數量：正常為 0；手動送 malformed JSON 後會增加。
-- DLQ 原始文件：查看 `raw_record`、來源 topic、partition、offset 與 DLQ timestamp。
+- DLQ 壞資料數量：正常為 0；主 sink 讀取 source 訊息時發現 malformed JSON 後會寫入 DLQ，數字會增加。
+- DLQ 明細 - Elasticsearch raw doc：查看 `raw_record`、來源 topic、partition、offset 與 DLQ timestamp；展開列可看完整 raw document。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
 - 高頻操作線索，用來觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者；這是排查線索，不代表 bot 偵測。
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
@@ -259,7 +259,7 @@ E2E 會驗證：
 - Connect restart 後仍可繼續 indexing
 - Kafka Connect internal topics 已建立
 
-Dashboard setup script 可以重跑；它會覆蓋相同 saved object ids。dashboard 預設 refresh interval 是 5 秒，讓現場 demo 更快看見新資料。seed 腳本會覆蓋 dashboard time range，使它對齊固定產生的事件時間窗。
+Dashboard setup script 可以重跑；它會覆蓋相同 saved object ids。dashboard 預設 refresh interval 是 5 秒，time range 預設是 `now-3h` 到 `now`，讓現場 demo 打開後可以直接看到剛產生完的整段事件。seed 腳本會覆蓋 dashboard time range，使它對齊本輪產生資料的結束時間。
 
 ## 重置
 

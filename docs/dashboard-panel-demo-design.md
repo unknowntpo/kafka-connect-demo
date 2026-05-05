@@ -5,11 +5,18 @@
 目標是讓學生先看懂 dashboard 上的現象，再沿著資料路線往前追：
 
 ```text
-+-------------------+     +----------------------+        Kafka Connect         +----------------------+     +------------------+
-| Java Event        | --> | Kafka topic          | ---- Elasticsearch Sink --> | Elasticsearch        | --> | Kibana Dashboard |
-| Generator         |     | product.events       |      讀 Kafka、寫 ES         | index: product-events|     |                  |
-+-------------------+     +----------------------+                              +----------------------+     +------------------+
-     產生事件                    先接住事件                         標準化搬運資料                      快速查詢                      畫成圖表
++-------------------+     +----------------------+   +-------------------------+   +----------------------+     +------------------+
+| Java Event        | --> | Kafka 等候區         |-->| Kafka Connect 搬運工   |-->| Elasticsearch 倉庫   | --> | Kibana 觀察台    |
+| Generator         |     | product.events       |   | 讀 Kafka / 整理 / 寫 ES |   | index: product-events|     | 圖表 + 明細      |
++-------------------+     +----------------------+   | JSON + SMT + upsert     |   +----------------------+     +------------------+
+     產生事件                    先接住事件              +------------+------------+          快速查詢                      畫成圖表
+                                                                   |
+                                                                   | source 訊息壞掉，寫入 DLQ topic
+                                                                   v
+                                                          +--------------------+
+                                                          | product.events.dlq |
+                                                          | raw bad record     |
+                                                          +--------------------+
 ```
 
 ## 教學主軸
@@ -45,12 +52,12 @@ Kafka Connect REST API 與 connector config 只在需要時展示。它的角色
 
 | Panel | 它回答的問題 | 需要的欄位 | 帶出的 Kafka Connect 知識點 |
 |---|---|---|---|
-| Demo 導覽 - 事件旅行路線 | 這些圖表的資料從哪裡來？壞資料會被送去哪裡？ | 無 | Kafka Connect 是 Kafka 與 Elasticsearch 之間的橋樑，DLQ 是壞資料隔離路線 |
-| 事件明細 - Elasticsearch 文件 | 圖表背後的 document 長什麼樣子？ | `event_id`, `event_type`, `metadata_region`, `pipeline` | SMT 後的資料形狀、`pipeline` 來源標記 |
+| Demo 導覽 - 事件旅行路線 | 這些圖表的資料從哪裡來？壞資料會被送去哪裡？ | 無 | Kafka 是等候區、Kafka Connect 是搬運工、Elasticsearch 是可查詢倉庫、Kibana 是觀察台；DLQ 是壞資料隔離路線 |
+| 事件明細 - Elasticsearch 文件（可展開 raw doc） | 圖表背後的 document 長什麼樣子？ | `event_id`, `event_type`, `metadata_region`, `pipeline` | SMT 後的資料形狀、`pipeline` 來源標記；展開列可看完整 raw document |
 | 事件類型趨勢 | 每分鐘不同使用者行為如何變化？ | `occurred_at`, `event_type` | Elasticsearch 聚合來自 Kafka Connect 寫入的欄位 |
 | 事件總數 | Kafka Connect 是否已經把事件寫進 Elasticsearch？ | 任一 document | Sink connector 寫入結果、資料是否到達下游 |
 | DLQ 壞資料數量 | 是否有 record 因解析或寫入問題被隔離？ | `raw_record`, `pipeline` | DLQ topic 也可以由另一條 sink pipeline 寫入 ES |
-| DLQ 原始文件 - Elasticsearch 壞資料 | 被隔離的壞 record 寫到 Elasticsearch 後長什麼樣子？ | `raw_record`, `source_topic`, `source_partition`, `source_offset`, `dlq_timestamp`, `pipeline` | `StringConverter` 保留 raw value，`HoistField` 與 `InsertField` 補出可追查欄位 |
+| DLQ 明細 - Elasticsearch raw doc | 被隔離的壞 record 寫到 Elasticsearch 後長什麼樣子？ | `raw_record`, `source_topic`, `source_partition`, `source_offset`, `dlq_timestamp`, `pipeline` | `StringConverter` 保留 raw value，`HoistField` 與 `InsertField` 補出可追查欄位；展開列可看完整 raw document |
 | 熱門商品行為統計 | 五種事件各累積多少？ | `event_type` | KQL filters、事件模型 |
 | 剩餘折價券變化 | 券何時接近售罄、何時歸零？ | `remaining_coupons`, `occurred_at` | 業務觀測欄位會被原樣寫入 ES |
 | 失敗原因 | 領券失敗主要因為什麼？ | `failure_reason` | event model 必須保留可分類的錯誤原因 |
@@ -65,9 +72,10 @@ Kafka Connect REST API 與 connector config 只在需要時展示。它的角色
 
 ```text
 Application 產生 event
-Kafka 接住 event
-Kafka Connect 把 event 搬到 Elasticsearch
-Kibana 查詢 Elasticsearch 並畫成 dashboard
+Kafka 像等候區，先接住 event
+Kafka Connect 像搬運工，把 event 搬到 Elasticsearch
+Elasticsearch 像可查詢倉庫，保存文件
+Kibana 像觀察台，把文件畫成 dashboard
 無法解析或寫入的 record 會被 Kafka Connect 隔離到 DLQ
 DLQ topic 會再由另一條 sink pipeline 寫入 Elasticsearch
 ```
@@ -75,17 +83,17 @@ DLQ topic 會再由另一條 sink pipeline 寫入 Elasticsearch
 ### 建議講法
 
 ```text
-今天不會一開始要求大家記住所有工具名稱。
-先看這條資料路線：事件先進 Kafka，Kafka Connect 站在 Kafka 和 Elasticsearch 中間，負責讀 Kafka、做必要轉換、寫入 Elasticsearch。
-Kibana dashboard 上的每一張圖，都是從 Elasticsearch 裡的 product-events index 查詢與聚合出來的。
-如果 Kafka Connect 遇到 malformed JSON 這類壞資料，主流程仍會繼續處理其他事件；壞資料會走到 product.events.dlq，再由 DLQ sink 寫入 product-events-dlq，最後反映在 DLQ 壞資料數量 panel。
+先用現場工作來記四個角色：Kafka 是等候區，Kafka Connect 是搬運工，Elasticsearch 是可查詢倉庫，Kibana 是觀察台。
+事件先進 Kafka 等候區，Kafka Connect 搬運工站在 Kafka 和 Elasticsearch 中間，負責讀 Kafka、做必要轉換、寫入 Elasticsearch。
+Kibana dashboard 上的每一張圖，都是從 Elasticsearch 倉庫裡的 product-events index 查詢與聚合出來的。
+如果 Kafka Connect 搬運工讀取 source 訊息時遇到 malformed JSON，主流程仍會繼續處理其他事件；主 sink 會把 raw bad record 寫入 product.events.dlq，再由 DLQ sink 寫入 product-events-dlq，最後反映在 DLQ 壞資料數量 panel。
 ```
 
 ### 往資料源頭追
 
 這一頁不操作資料，只用來做導航。後續每看一個 panel，都回到這張圖說明目前站在哪一段。
 
-## 2. 事件明細 - Elasticsearch 文件
+## 2. 事件明細 - Elasticsearch 文件（可展開 raw doc）
 
 ### 要講的知識點
 
@@ -217,14 +225,14 @@ Kafka topic 有資料，不代表 Elasticsearch 一定有資料。
 資料管線有沒有遇到無法解析或無法寫入的 record？
 ```
 
-正常 demo 應該是 `0`。手動送一筆 malformed JSON 後，主 Elasticsearch sink 會把壞 record 寫到 `product.events.dlq`，另一條 DLQ sink 會把這個 DLQ topic 寫入 `product-events-dlq` index，Kibana 才能看到數字。
+正常 demo 應該是 `0`。手動送一筆 malformed JSON 後，主 Elasticsearch sink 在讀取 source 訊息時發現無法解析，會把 raw bad record 寫到 `product.events.dlq`；另一條 DLQ sink 會把這個 DLQ topic 寫入 `product-events-dlq` index，Kibana 才能看到數字。
 
 ### 建議講法
 
 ```text
 這個數字代表資料管線層級的壞資料，例如 JSON 格式錯誤，Kafka Connect 無法把它解析成欄位化 record。
 業務失敗請看「失敗原因」panel；資料格式或寫入問題請看 DLQ panel。
-主流程不會因為這一筆壞資料停掉；壞資料會被隔離到 DLQ。
+主流程不會因為這一筆壞資料停掉；Kafka Connect 會把這筆壞資料隔離到 DLQ。
 ```
 
 ### 往資料源頭追
@@ -250,11 +258,11 @@ DLQ 是 Kafka Connect 的錯誤隔離設計。
 如果要讓 Kibana 看到 DLQ 狀態，DLQ topic 也需要被寫入 Elasticsearch。
 ```
 
-## 6. DLQ 原始文件 - Elasticsearch 壞資料
+## 6. DLQ 明細 - Elasticsearch raw doc
 
 ### 要講的知識點
 
-這個 panel 展示 `product-events-dlq` 裡的一筆筆 Elasticsearch document。它和「事件明細 - Elasticsearch 文件」的角色相同，但資料來源是 DLQ pipeline。
+這個 panel 展示 `product-events-dlq` 裡的一筆筆 Elasticsearch document。它和「事件明細 - Elasticsearch 文件（可展開 raw doc）」的角色相同，但資料來源是 DLQ pipeline。
 
 目前顯示欄位：
 
@@ -272,14 +280,14 @@ dlq_timestamp
 ```text
 DLQ 數量只能回答有幾筆壞資料。
 這個表格可以看壞資料本身，也可以看它來自哪個 topic、partition 和 offset。
-主 sink 解析失敗時，壞 record 被寫到 product.events.dlq；DLQ sink 再把 raw_record 和來源資訊寫入 product-events-dlq。
+主 sink 讀取 source 訊息並解析失敗時，raw bad record 被寫到 product.events.dlq；DLQ sink 再把 raw_record 和來源資訊寫入 product-events-dlq。
 ```
 
 ### 往資料源頭追
 
 1. 手動送 malformed JSON 到 `product.events`。
 2. 看「Kafka Connect - DLQ 壞資料數量」是否從 0 變 1。
-3. 到「DLQ 原始文件 - Elasticsearch 壞資料」查看 `raw_record`。
+3. 到「DLQ 明細 - Elasticsearch raw doc」查看 `raw_record`，展開列可看完整 raw document。
 4. 對照 Redpanda Console 的 `product.events.dlq` record。
 
 可以帶出的 Kafka Connect 知識點：

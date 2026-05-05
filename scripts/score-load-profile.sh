@@ -3,9 +3,9 @@ set -euo pipefail
 
 ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:9200}"
 SCENARIO="${SCENARIO:-flash-sale-coupon}"
-WINDOW_FROM="${WINDOW_FROM:-now-90m}"
+WINDOW_FROM="${WINDOW_FROM:-now-3h}"
 WINDOW_TO="${WINDOW_TO:-now}"
-FIRST_FROM="${FIRST_FROM:-now-90m}"
+FIRST_FROM="${FIRST_FROM:-now-3h}"
 FIRST_TO="${FIRST_TO:-now-60m}"
 MIDDLE_FROM="${MIDDLE_FROM:-now-60m}"
 MIDDLE_TO="${MIDDLE_TO:-now-30m}"
