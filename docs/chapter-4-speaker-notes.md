@@ -22,3 +22,48 @@
 3. 重播 demo：`just run-demo`
 4. 若 Kibana saved object 回 429，檢查 Elasticsearch flood-stage watermark，必要時清理 Docker disk 並解除 read-only block。
 5. 若需要完整驗證，執行 `just e2e`。
+
+## 有獎徵答
+
+這兩題安排在 `just run-demo` 跑完、手動送 malformed JSON 進 DLQ 之後。題目要有可驗證的唯一答案，避免變成開放式討論。
+
+### 題目 1：DLQ 數字代表哪裡的資料？
+
+題目：
+
+```text
+Kibana 上「Kafka Connect - DLQ 壞資料數量」顯示 1，代表哪個 Elasticsearch index 裡有 1 筆 document？
+```
+
+標準答案：
+
+```text
+product-events-dlq
+```
+
+可現場驗證：
+
+```bash
+curl -s http://localhost:9200/product-events-dlq/_count
+```
+
+### 題目 2：SMT 把地區欄位改成什麼？
+
+題目：
+
+```text
+Kafka raw record 裡的 metadata.region，經過 Kafka Connect 的 Flatten SMT 後，在 Elasticsearch document 裡變成哪個欄位？
+```
+
+標準答案：
+
+```text
+metadata_region
+```
+
+可現場驗證：
+
+```text
+Kafka raw record: metadata.region
+Elasticsearch document: metadata_region
+```

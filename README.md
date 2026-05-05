@@ -75,7 +75,7 @@ Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson
 
 - data views：`product-events`、`product-events-dlq`
 - 9 個 visualization panels
-- 1 個 Elasticsearch 文件明細 search panel
+- 2 個 Elasticsearch 文件明細 search panels：正常事件文件與 DLQ 原始文件
 - dashboard layout 與 references
 
 建立或覆蓋 dashboard：
@@ -230,6 +230,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 依 `event_type` 切分的事件量趨勢
 - 熱門商品行為統計：五種事件類型的事件數，總計應與事件總數一致。
 - DLQ 壞資料數量：正常為 0；手動送 malformed JSON 後會增加。
+- DLQ 原始文件：查看 `raw_record`、來源 topic、partition、offset 與 DLQ timestamp。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
 - 高頻操作線索，用來觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者；這是排查線索，不代表 bot 偵測。
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
@@ -258,7 +259,7 @@ E2E 會驗證：
 - Connect restart 後仍可繼續 indexing
 - Kafka Connect internal topics 已建立
 
-Dashboard setup script 可以重跑；它會覆蓋相同 saved object ids。dashboard 預設 refresh interval 是 30 秒，避免本機 Elasticsearch container 壓力過大。seed 腳本會覆蓋 dashboard time range，使它對齊固定產生的事件時間窗。
+Dashboard setup script 可以重跑；它會覆蓋相同 saved object ids。dashboard 預設 refresh interval 是 5 秒，讓現場 demo 更快看見新資料。seed 腳本會覆蓋 dashboard time range，使它對齊固定產生的事件時間窗。
 
 ## 重置
 

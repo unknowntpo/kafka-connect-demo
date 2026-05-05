@@ -1,8 +1,8 @@
 ---
 theme: default
-title: Kafka Connect 第四章 - 用限量折價券搶領觀測設計資料管線
+title: Kafka Connect Live Demo - 熱門商品銷售觀測
 info: |
-  這份 Slidev 投影片用熱門商品帶動限量折價券搶領的觀測情境，介紹 Kafka、Kafka Connect、Elasticsearch 與 Kibana 如何組成一條可觀察的資料管線。
+  這份 Slidev 投影片只做 live demo 開場。先用比喻建立 Kafka、Kafka Connect、Elasticsearch、Kibana 的共同語言，再切到現場 dashboard。
 class: text-left
 drawings:
   persist: false
@@ -10,1130 +10,282 @@ transition: slide-left
 mdc: true
 ---
 
-# Kafka Connect 第四章
+<section class="kc-slide">
+  <h1 class="kc-title">先認識四個角色</h1>
+  <p class="kc-subtitle">Think of the demo as a busy coupon campaign site</p>
 
-用限量折價券搶領觀測理解資料管線設計
+  <div class="kc-concepts">
+    <div class="kc-concept">
+      <div class="kc-icon">01</div>
+      <div class="kc-tag">Kafka</div>
+      <div class="kc-use-title">
+        <strong>活動事件的等候區</strong>
+        <em>Event waiting area</em>
+      </div>
+      <p>頁面瀏覽、重新整理、進等候室、領券結果，都先排進 `product.events`。</p>
+      <div class="kc-example">像櫃檯前的號碼牌：先接住每件事。</div>
+    </div>
 
-<div class="grid grid-cols-[1fr_160px] gap-8 items-end mt-10">
-<div>
+    <div class="kc-concept">
+      <div class="kc-icon">02</div>
+      <div class="kc-tag">Connect</div>
+      <div class="kc-use-title">
+        <strong>搬運工</strong>
+        <em>Data mover</em>
+      </div>
+      <p>Kafka Connect 從 Kafka 搬資料到 Elasticsearch，搬運時整理欄位、貼上 pipeline 標籤。</p>
+      <div class="kc-example">壞資料另外送到 DLQ，不堵住主路線。</div>
+    </div>
 
-```text
-限量折價券搶領事件如何進入 dashboard？
-```
+    <div class="kc-concept">
+      <div class="kc-icon">03</div>
+      <div class="kc-tag">ES</div>
+      <div class="kc-use-title">
+        <strong>可搜尋的事件倉庫</strong>
+        <em>Searchable document store</em>
+      </div>
+      <p>Elasticsearch 把事件變成文件，讓我們快速查詢、過濾、聚合。</p>
+      <div class="kc-example">像倉庫索引：知道每筆資料在哪裡。</div>
+    </div>
 
-Repo: [github.com/unknowntpo/kafka-connect-demo](https://github.com/unknowntpo/kafka-connect-demo)
-
-</div>
-
-<img src="/repo-qr.png" class="w-40 bg-white p-2 rounded" />
-
-</div>
-
----
-layout: section
----
-
-# 問題場景：限量折價券八點開搶
-
----
-
-# 團隊真正想知道什麼？
-
-假設平台今晚八點推出限量折價券，並在八點開放搶購。
-
-營運與工程團隊需要快速做出判斷：
-
-- 折價券活動流量是不是正在快速上升？
-- 領券失敗原因是售罄還是限流？
-- 哪些地區壓力最大？
-
-這些判斷，就是 dashboard 要提供的洞見。
-
-因此設計順序應該是：
-
-```text
-洞見 -> 指標 -> 事件 -> 資料管線
-```
-
----
-
-# 把洞見轉成指標
-
-把前一頁的洞見轉成可觀察的指標：
-
-- 流量是否正在快速上升？
-- 使用者是在瀏覽活動頁、重新整理、排隊，還是領券？
-- 領券成功率是否下降？
-- 失敗原因是售罄還是限流？
-- 哪些地區壓力最大？
-- 是否有少數使用者出現高頻操作線索？
-
-核心問題：
-
-```text
-熱門商品帶動折價券搶領時，哪些指標能幫助團隊近即時判斷狀況？
-```
+    <div class="kc-concept">
+      <div class="kc-icon">04</div>
+      <div class="kc-tag">Kibana</div>
+      <div class="kc-use-title">
+        <strong>活動觀察大螢幕</strong>
+        <em>Operations dashboard</em>
+      </div>
+      <p>Kibana 讀 Elasticsearch，把事件畫成趨勢、表格、地區流量與 DLQ 數字。</p>
+      <div class="kc-example">等一下 live demo 會從這裡開始。</div>
+    </div>
+  </div>
+</section>
 
 ---
 
-# 指標可以分為兩類
+<section class="kc-slide">
+  <h1 class="kc-title">實際用在哪裡?</h1>
+  <p class="kc-subtitle">Common Use Cases in This Kafka Connect Demo</p>
 
-第一類是正式活動結果。
+  <p class="kc-lead">用限量折價券搶領事件，先看見 dashboard，再回頭拆資料路線。</p>
 
-活動系統通常關心：
+  <div class="kc-usecases">
+    <div class="kc-usecase">
+      <div class="kc-icon">01</div>
+      <div class="kc-tag">SEARCH</div>
+      <div class="kc-use-title">
+        <strong>事件寫入 Elasticsearch</strong>
+        <em>Indexing Kafka Events for Search</em>
+      </div>
+      <p>Kafka Connect 讀取 `product.events`，把事件穩定寫到 `product-events`。</p>
+      <div class="kc-example">例: 從 dashboard 點回一筆 Elasticsearch document。</div>
+    </div>
 
-- 使用者是否符合資格
-- 折價券是否扣除
-- 領券紀錄是否成立
+    <div class="kc-usecase">
+      <div class="kc-icon">02</div>
+      <div class="kc-tag">OBSERVE</div>
+      <div class="kc-use-title">
+        <strong>用 Dashboard 看活動壓力</strong>
+        <em>Observing Traffic and Failures</em>
+      </div>
+      <p>Kibana 呈現事件趨勢、總數、失敗原因、剩餘折價券與地區流量。</p>
+      <div class="kc-example">例: 發現 17:00 附近流量暴衝與領券失敗。</div>
+    </div>
 
-第二類是活動觀測狀態。
-
-這類問題需要分析事件流：
-
-- 每分鐘有多少瀏覽？
-- 重新整理是否突然上升？
-- 領券失敗是否集中在某個時間點？
-- 售罄後使用者是否仍大量重試？
-
-這個 demo 接下來聚焦限量折價券搶領狀態。
-
----
-layout: section
----
-
-# 選定這個 demo 的觀測指標
-
----
-
-# 為什麼要先選定觀測指標？
-
-先定義兩個接下來會反覆出現的詞：
-
-```text
-event = 一筆使用者或系統行為紀錄
-資料管線 = 把事件從產生端送到查詢或視覺化系統的一連串處理步驟
-```
-
-如果一開始沒有先決定洞見與指標，後面會不知道：
-
-- event 應該長什麼樣子
-- 資料管線需要保存哪些資訊
-- 查詢系統要怎麼查
-- dashboard 要放哪些圖
-- 資料管線是否真的支援觀測與排查
-
-這個順序能避免先建立 pipeline，再回頭推測 dashboard 應呈現哪些資料。
+    <div class="kc-usecase">
+      <div class="kc-icon">03</div>
+      <div class="kc-tag">DLQ</div>
+      <div class="kc-use-title">
+        <strong>隔離壞資料</strong>
+        <em>Dead Letter Queue for Bad Records</em>
+      </div>
+      <p>Malformed JSON 進 `product.events.dlq`，再寫到 `product-events-dlq`。</p>
+      <div class="kc-example">例: 手動送壞 JSON 後，DLQ count 從 0 變 1。</div>
+    </div>
+  </div>
+</section>
 
 ---
 
-# 這個 demo 要追蹤的觀測指標
-
-把想得到的洞見轉成可計算的指標：
-
-| 指標 | 問題 |
-| --- | --- |
-| 事件總數 | 事件是否已進入查詢系統？ |
-| 事件類型 | 流量是在瀏覽、重新整理、點擊、成功，還是失敗？ |
-| 熱門商品行為統計 | 五種事件類型各自累積多少？ |
-| 失敗原因 | 是售罄還是限流？ |
-| 高頻操作線索 | 短時間內反覆重新整理或多次領券失敗是否集中於少數使用者？ |
-| 地區流量 | 哪些地區的事件量最高？ |
-
----
-
-# 指標由事件形成
-
-dashboard 上的指標，通常由大量事件計算而來：
-
-```text
-單筆事件
-  -> 依時間、類型、地區、折價券分組
-  -> 計算 count / rate / top N
-  -> 形成 dashboard 指標
-```
-
-例如：
-
-- 每分鐘瀏覽量 = 每分鐘 `COUPON_VIEWED` 事件數
-- 失敗原因分布 = 依 `failure_reason` 分組後計數
-- 地區流量 = 依 `metadata.region` 分組後計數
-
-因此，先決定指標，才能回推事件需要包含哪些欄位。
-
----
-
-# 指標會反推事件欄位
-
-在這個 demo 中，一筆 event 可以是：
-
-- 使用者瀏覽折價券活動頁
-- 使用者重新整理頁面
-- 使用者進入等候室
-- 使用者領券成功
-- 使用者領券失敗
-
----
-
-# Event 需要哪些欄位？
-
-要追蹤上述 metrics，event 至少需要：
-
-```text
-event_type
-occurred_at
-user_id
-coupon_id
-remaining_coupons
-failure_reason
-metadata.region
-```
-
----
-
-# 欄位如何對應指標？
-
-| 欄位 | 範例值 | 支援的指標 |
-| --- | --- | --- |
-| `event_type` | `PAGE_REFRESHED` | 事件類型 |
-| `occurred_at` | `run_started_at + 15s` | 每分鐘流量 |
-| `user_id` | `user_01883` | 高頻操作線索 |
-| `coupon_id` | `coupon_may_sale` | 指定折價券觀測 |
-| `remaining_coupons` | `0` | 售罄壓力 |
-| `failure_reason` | `RATE_LIMITED` | 失敗原因 |
-| `metadata.region` | `TW-NORTH` | 地區流量 |
-
-Dashboard 想回答的問題，會直接決定 event 裡需要哪些欄位。
-
----
-layout: section
----
-
-# 下一個問題：資料要放在哪裡？
-
----
-
-# 先看整個 Service 要做什麼
-
-限量折價券搶領觀測看起來是一個 dashboard。
-
-實際上，背後至少包含四種工作：
-
-| 工作 | 例子 |
-| --- | --- |
-| 處理活動狀態 | 建立領券紀錄、扣除折價券數量、套用限流 |
-| 建立可查詢資料 | 把事件整理成適合搜尋與聚合的格式 |
-| 查詢事件 | 查某段時間的瀏覽、重新整理、成功、失敗 |
-| 聚合與統計 | 計算每分鐘流量、失敗原因、地區分布 |
-
----
-
-# 活動流程也會產生 Event
-
-處理領券流程時通常也會產生 event：
-
-| 輸出 | 用途 |
-| --- | --- |
-| 活動結果 | 保存領券紀錄、剩餘券數、限流結果 |
-| 事件紀錄 | 送進資料管線，用於觀測 |
-
-接下來的架構選擇要回答：
-
-```text
-這些工作要由同一個系統承擔，還是拆給不同系統負責？
-```
-
----
-
-# 從 Service 責任走到資料架構
-
-到這裡，我們只完成第一步：
-
-```text
-知道要觀察什麼
-知道 event 應該長什麼樣子
-```
-
-但還沒有回答第二步：
-
-```text
-這些 event 要寫到哪裡？
-誰負責讓 dashboard 查得到？
-```
-
-接下來進入架構選擇。
-
-先把候選方案列出來，再檢查它們如何分配 service 責任：
-
-- 直接查正式狀態 Database
-- Application 直接寫搜尋系統
-- 透過 Kafka 與 Kafka Connect 建立資料管線
-
----
-
-# 第一個候選方案：直接查正式狀態 DB
-
----
-
-# Database 適合承擔正式狀態
-
-在這四種工作裡，正式狀態 Database 最適合承擔「處理活動狀態」與「保存正式狀態」：
-
-- 領券紀錄
-- 剩餘券數
-- 使用者資格
-- 限流結果
-
-這些資料代表正式業務結果，需要正確性與一致性。
-
----
-
-# 觀測查詢壓在正式狀態 DB 的風險
-
-如果同一個正式狀態 DB 還要承擔「查詢事件」與「聚合統計」，折價券搶領爆量時會有下列風險：
-
-- 大量查詢可能影響領券流程。
-- event-style 查詢和正式狀態 DB 的主要設計目標不同。
-- 每分鐘聚合、失敗原因統計、地區流量分析會和正式狀態 workload 混在一起。
-- 長期事件明細、查詢索引與 dashboard 聚合會增加正式狀態 DB 的負擔。
-
-設計判斷：
-
-```text
-正式狀態 DB 保存活動結果與必要稽核紀錄。
-事件查詢與 dashboard 聚合需要獨立評估負載、資料量與查詢型態。
-```
-
----
-
-# 不是所有歷史資料都要搬走
-
-領券紀錄、扣券結果、必要審計欄位通常仍會保存在正式狀態 DB。
-
-需要另外評估的是：
-
-- 大量事件明細
-- 搜尋索引
-- 時間序列聚合
-- dashboard 查詢模型
-
-這些資料常會複製到 read-optimized store 或觀測系統。
-
----
-
-# 觀測查詢需要另一種系統
-
-事件查詢與聚合統計需要的能力更接近：
-
-- 事件搜尋
-- 時間序列統計
-- dashboard 查詢
-
-因此下一個候選方案是：
-
-```text
-把 event 寫進搜尋與聚合系統
-```
-
----
-
-# 第二個候選方案：Application 直接寫 Elasticsearch
-
----
-
-# Elasticsearch 在這裡的角色
-
-Elasticsearch 適合承擔三種工作：
-
-- 建立可查詢資料
-- 查詢事件
-- 聚合與統計
-
-在這個 demo 中，Elasticsearch index 可以想成：
-
-```text
-讓事件能被快速搜尋與聚合的索引
-```
-
-新的問題是：
-
-```text
-event 要怎麼從 application 穩定進入 Elasticsearch？
-```
-
----
-
-# Application 同步寫 Elasticsearch 的代價
-
-如果電商 application 同步寫 Elasticsearch：
-
-```text
-使用者請求
-    |
-    +-> 寫正式狀態 DB
-    |
-    +-> 寫 Elasticsearch
-```
-
-application 需要自己處理：
-
-- 寫入搜尋系統可能變慢。
-- 失敗後要重試。
-- 下游變慢時，使用者請求可能被迫等待。
-- 外部系統短暫失敗
-- 重送造成的重複寫入
-
-使用者請求會受到外部系統速度、重試與錯誤處理影響。
-
----
-
-# 需要一個中間層
-
-application 層保留兩個必要責任：
-
-```text
-產生 event
-寫入一個可緩衝、可重放的地方
-```
-
-後面的搜尋、觀測、dashboard 寫入，交給資料管線處理。
-
-這會導向第三個候選方案：
-
-```text
-Application -> Kafka -> Kafka Connect -> Elasticsearch
-```
-
-第一步先引入 Kafka：
-
-```text
-Application -> Kafka
-```
-
-此時先不討論 dashboard，也先不討論 Kafka Connect。
-
----
-layout: section
----
-
-# Kafka 能做到什麼？
-
----
-
-# Kafka 的第一個角色：承接事件流
-
-Kafka 在這個 demo 中扮演事件流入口。
-
-```text
-Application
-    |
-    | event
-    v
-Kafka
-```
-
-這樣 application 不需要同步等待 dashboard 系統完成寫入。
-
-它只需要先把事件送出。
-
----
-
-# Topic 是什麼？
-
-Kafka 會把 event 放進 topic。
-
-```text
-topic = 一條有名字的事件流
-```
-
-這個 demo 的 topic：
-
-```text
-product.events
-```
-
-可以把它想成：
-
-```text
-所有折價券搶領事件都先排進 product.events
-```
-
----
-
-# Kafka 的第二個角色：緩衝、重試與重放
-
-Kafka 提供三個重要能力：
-
-- buffering：後面的系統變慢時，事件仍可先保留在 Kafka。
-- producer retry：暫時性送出失敗時，Producer client 可以重試。
-- replay：後面的系統需要重建資料時，可以重新讀 topic。
-
-因此，application 與觀測系統不需要同步綁在一起。
-
-```text
-Application -> Kafka -> 後續系統
-```
-
-Kafka 先保存事件，再由後續系統依各自速度消費。
-
----
-
-# 這條資料管線的 Events
-
-這條資料管線主要使用限量折價券事件：
-
-- `COUPON_VIEWED`
-- `PAGE_REFRESHED`
-- `WAITING_ROOM_JOINED`
-- `COUPON_CLAIM_SUCCEEDED`
-- `COUPON_CLAIM_FAILED`
-
-這組事件能清楚呈現重新整理、排隊、售罄與失敗原因。
-
-Kafka 只負責承接與保存事件流，不負責產生 dashboard，也不負責把資料寫入 Elasticsearch。
-
----
-layout: section
----
-
-# Kafka Connect 把兩邊串起來
-
----
-
-# Kafka Connect 的角色
-
-Kafka Connect 負責把 Kafka topic 接到外部系統。
-
-在這個 demo 中：
-
-```text
-Kafka topic: product.events
-        |
-        v
-Kafka Connect
-        |
-        v
-Elasticsearch index: product-events
-```
-
-此處選擇 Kafka Connect 來同步 Elasticsearch。
-
-先用一句話理解：
-
-```text
-Kafka Connect = Kafka 與外部系統之間的標準資料搬運層
-```
-
-這個 demo 的外部系統是 Elasticsearch。
-
----
-
-# 完整 Demo 架構
-
-```text
-Java 事件產生器
-        |
-        | JSON events
-        v
-Kafka topic: product.events
-        |
-        | Kafka Connect
-        v
-Elasticsearch index: product-events
-        |
-        v
-Kibana Dashboard
-```
-
-這條管線的目標超過「有資料」。
-
-重點是：
-
-```text
-資料流動過程可觀察、可維護、可重跑、可處理錯誤。
-```
-
----
-layout: section
----
-
-# 可重播的近即時觀測流程
-
----
-
-# Dashboard 要呈現什麼？
-
-真實資料管線不能只確認指令有執行。
-
-它需要讓 dashboard 呈現可判讀的觀測結果：
-
-- 事件總數快速累積。
-- 事件類型隨時間變化。
-- 成功與失敗比例改變。
-- 售罄或限流造成失敗原因集中。
-- 高頻操作線索浮現。
-- 不同地區有不同流量壓力。
-
-這些 panel 對應到一個真實問題：
-
-```text
-折價券搶領是不是正在爆量？
-爆量後，系統與使用者遇到了什麼狀況？
-```
-
----
-
-# 實際 Demo 指令
-
-啟動 stack：
-
-```bash
-just setup
-```
-
-產生一組固定劇本的流量。事件開始時間會對齊執行當下，因此打開 dashboard 時比較容易定位：
-
-```bash
-just run-demo
-```
-
-Dashboard：
-
-```text
-http://localhost:5601/app/dashboards
-```
-
----
-
-# Demo 模式說明
-
-這個 demo 採用可重播模式：
-
-- 每次先清理上一輪 demo 狀態。
-- 使用執行當下作為事件開始時間。
-- 重新產生 24,000 筆折價券搶領事件。
-- Dashboard time range 會對齊這次產生的事件時間窗。
-
-因此，資料會落在目前時間附近，事件數、比例與波形仍由固定 seed 與 profile 控制。
-
----
-
-# Dashboard Panel Review
-
-目前 dashboard 觀察項目：
-
-| Panel | 目的 |
-| --- | --- |
-| 事件總數 | 確認事件已進入查詢系統 |
-| 事件類型 | 看瀏覽、重新整理、成功、失敗如何隨時間變化 |
-| 熱門商品行為統計 | 看瀏覽、重新整理、排隊、成功、失敗的事件數 |
-| DLQ 壞資料數量 | 看資料管線是否有 record 被隔離 |
-| 失敗原因 | 看售罄或限流是否集中 |
-| 高頻操作線索 | 觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者 |
-| 地區流量 | 比較不同地區的壓力分布 |
-
----
-
-# Panel 不能代表全部健康狀態
-
-`熱門商品行為統計` 是依五種 `event_type` 分組後的事件數，加總應等於事件總數。
-
-它仍不是完整領券成功率；完整成功率需要額外定義嘗試次數與成功次數。
-
-資料管線是否健康，還需要搭配：
-
-- connector / task 狀態
-- Elasticsearch 寫入結果
-- 端到端檢查
-
----
-layout: section
----
-
-# Demo 之後，再拆第四章概念
-
----
-
-# 接下來才進入第四章術語
-
-前面先建立直覺：
-
-```text
-event -> topic -> Kafka -> Kafka Connect -> Elasticsearch
-```
-
-接下來開始拆 Kafka Connect 的設計問題。
-
-每個術語都對應到 demo 中的一個實際零件。
-
----
-
-# 第四章的核心主軸
-
-先抓住一句話：
-
-```text
-資料管線要能跑，
-也要能被維護、觀察與安全重送。
-```
-
-接下來只看五個問題：
-
-- 方向：資料往哪裡走？
-- 格式：怎麼解析與轉換？
-- 錯誤：壞資料去哪裡？
-- 狀態：出事時看哪裡？
-- 重送：重複寫入怎麼辦？
-
-接下來每個設計問題只處理其中一個面向。
-
----
-
-# 方向：Connector 決定資料往哪裡走
-
-第一個術語是 connector。
-
-```text
-connector = Kafka Connect 用來連接外部系統的元件
-```
-
-先判斷資料方向：
-
-```text
-Source connector:
-  外部系統 -> Kafka
-
-Sink connector:
-  Kafka -> 外部系統
-```
-
-我們的 demo 是 sink：
-
-```text
-Kafka -> Elasticsearch
-```
-
-原因：我們要把 Kafka events 變成可以搜尋、聚合與視覺化的資料。
-
----
-
-# 格式：Event Model 決定資料長什麼樣子
-
-Dashboard 要回答什麼問題，event 就必須包含對應欄位。
-
-範例：
-
-```json
-{
-  "event_type": "COUPON_CLAIM_FAILED",
-  "coupon_id": "coupon_mayday_001",
-  "user_id": "user_01234",
-  "occurred_at": "<run_started_at + 15s>",
-  "remaining_coupons": 0,
-  "failure_reason": "COUPON_SOLD_OUT",
-  "metadata": {
-    "region": "ap-northeast-1"
-  }
+<section class="kc-slide kc-shot-slide">
+  <h1 class="kc-title">熱門商品銷售觀測</h1>
+  <p class="kc-subtitle">The dashboard is the entry point, not the appendix.</p>
+
+  <div class="kc-band">Live demo starts here</div>
+
+  <div class="kc-shot-wrap">
+    <img src="/live-demo-dashboard.png" class="kc-shot" />
+  </div>
+
+  <p class="kc-footnote">下一步切到 Kibana: 從圖表、文件、DLQ count 追到 Kafka Connect 設定。</p>
+</section>
+
+<style>
+.slidev-layout {
+  background: #f5f8fa;
+  color: #21295c;
 }
-```
 
-沒有明確 event model，dashboard 只能呈現模糊訊息。
-
----
-
-# 格式：Converter 把 bytes 變成 record
-
-Kafka 裡的資料本質上是 bytes。
-
-Kafka Connect 需要 converter。
-
-Kafka 只保存位元資料。Connect 要先把資料解析成有欄位的 record，後面的 SMT 與 sink 才知道怎麼處理。
-
-```text
-ConnectRecord = Kafka Connect 內部用來表示一筆資料的標準格式
-converter = Kafka bytes 與 ConnectRecord 之間的轉換器
-```
-
----
-
-# 格式：Converter 在 Sink Pipeline 的位置
-
-Sink pipeline 中的流程：
-
-```text
-Kafka bytes
-    |
-    | JsonConverter
-    v
-ConnectRecord
-```
-
-此 demo 在 connector config 明確指定 `JsonConverter`。
-
-```text
-value.converter = JsonConverter
-value.converter.schemas.enable = false
-```
-
-此處的設計取捨：
-
-- schemaless JSON 容易直接觀察。
-- Kibana 可以直接看到欄位。
-- 多條 pipeline 可以各自設定 converter。
-
----
-
-# 格式：SMT 對單筆 record 做輕量轉換
-
-SMT 是 Single Message Transform。
-
-```text
-SMT = 對單筆 record 做輕量轉換
-```
-
-SMT 只看當下這一筆資料。
-
-它適合做輕量轉換：
-
-- 加欄位
-- 改欄位名
-- 刪欄位
-- 展平欄位
-
-SMT 不會拿多筆事件一起計算，也不會查其他資料表。
-
----
-
-# 格式：為什麼這個 demo 需要 SMT？
-
-Application 送出的 event 保留業務語意。
-
-Elasticsearch 與 Kibana 需要適合查詢與分組的欄位。
-
-SMT 負責在 Connect pipeline 裡做這層輕量調整。
-
-```text
-application event -> Connect SMT -> search-friendly document
-```
-
----
-
-# 格式：資料形狀在哪裡改變？
-
-Producer 送出的 event：
-
-```json
-{"metadata":{"region":"TW-NORTH"}}
-```
-
-Connect 寫入 Elasticsearch 前：
-
-```json
-{"metadata_region":"TW-NORTH","pipeline":"connect-search-demo"}
-```
-
-業務事件不變，查詢欄位變得更直接。
-
----
-
-# 格式：這個 demo 的 SMT
-
-我們使用兩個 SMT：
-
-| SMT | 轉換 | 目的 |
-| --- | --- | --- |
-| `Flatten` | `metadata.region` -> `metadata_region` | 讓 dashboard 直接依地區分組 |
-| `InsertField` | `pipeline=connect-search-demo` | 標記資料由這條 Connect pipeline 寫入 |
-
-```text
-metadata.region       metadata_region
-pipeline              connect-search-demo
-```
-
-這兩個轉換都只處理單筆 record。
-
-它們不需要查詢其他事件。
-
----
-
-# 方向：Partition 決定資料如何分散
-
-先定義 partition。
-
-```text
-partition = topic 內部的分段
-```
-
-同一個 topic 可以切成多個 partition：
-
-```text
-product.events
-  partition 0
-  partition 1
-  partition 2
-```
-
-Kafka 會依照 key 或分配策略，把 event 放進其中一個 partition。
-
-這讓資料可以被平行處理。
-
----
-
-# 方向：Task 負責實際搬資料
-
-task 可以先理解成實際搬資料的 worker。
-
-```text
-task = connector 實際執行資料搬運工作的單位
-```
-
-Sink connector 會讓 task 從 Kafka partitions 讀資料。
-
-Demo 設定：
-
-```text
-product.events topic: 3 partitions
-Elasticsearch sink: tasks.max=2
-```
-
-`tasks.max=2` 表示最多允許 2 個 task；實際 task 數仍受 partitions、connector 行為與外部系統限制。
-
----
-
-# 錯誤：DLQ 是壞資料隔離區
-
-DLQ 是 Dead Letter Queue。
-
-它用來暫存無法處理的壞資料。
-
-實務資料管線需要處理壞資料。
-
-例如 malformed JSON：
-
-```json
-{"event_id":"bad_1",
-```
-
-問題是：
-
-```text
-整條 pipeline 要停止？
-還是保存壞資料，讓主流程繼續？
-```
-
----
-
-# 錯誤：Demo 的 DLQ 設定
-
-Demo 設定：
-
-```text
-errors.tolerance=all
-errors.deadletterqueue.topic.name=product.events.dlq
-```
-
-此 demo 驗證的是解析或轉換階段的壞資料會進入 DLQ。
-
-Dashboard 的 DLQ panel 來自另一條 sink pipeline：
-
-```text
-product.events.dlq -> product-events-dlq
-```
-
----
-
-# 錯誤：DLQ 之後仍要處理問題
-
-DLQ 代表問題資料被隔離，後續仍要處理：
-
-- 外部系統故障。
-- 寫入 Elasticsearch 時欄位型別不相容。
-- 下游長時間變慢。
-- 監控、告警與補償流程。
-
----
-
-# 狀態：Kafka Connect 也需要記住狀態
-
-Kafka Connect worker 需要記住三類資訊：
-
-- config：connector 設定
-- offset：資料讀到哪裡
-- status：connector 與 task 是否正常
-
-這些狀態在 distributed mode 會寫回 Kafka。
-
-distributed mode 指的是多個 Kafka Connect worker 可以一起工作，因此狀態不能只放在單一 worker 本機。
-
----
-
-# 狀態：Internal Topics
-
-internal topics 是 Kafka Connect 用來保存自身狀態的 Kafka topics。
-
-```text
-connect-configs-hot-product-demo
-connect-offsets-hot-product-demo
-connect-status-hot-product-demo
-```
-
-用途：
-
-- configs topic：保存 connector 設定
-- offsets topic：保存資料讀到哪裡
-- status topic：保存 connector / task 狀態
-
-所以 worker 重啟後，可以從 Kafka 取回設定、進度與狀態。
-
----
-
-# 重送：資料會不會重複寫入？
-
-資料管線可能會重送資料。
-
-常見原因：
-
-- worker 寫到一半失敗。
-- 網路短暫中斷。
-- 外部系統回應逾時。
-
-因此要先理解 delivery semantics。
-
----
-
-# 重送：Delivery Semantics
-
-跨系統資料管線需要明確說明 delivery semantics。
-
-```text
-delivery semantics = 資料送出與重送時，系統能提供的處理保證
-```
-
-它回答三個問題：
-
-- 是否可能漏資料？
-- 是否可能重複？
-- 重複時會不會造成業務錯誤？
-
----
-
-# 重送：At-least-once 與 Exactly-once
-
-先用白話理解：
-
-```text
-at-least-once = 至少送到一次，可能重複
-exactly-once = 結果看起來只處理一次
-```
-
-此 demo 不宣稱跨 Kafka 到 Elasticsearch 的整條管線一定 exactly-once。
-
-精確說法是：
-
-```text
-Elasticsearch sink 以 at-least-once 方式理解。
-```
-
----
-
-# 重送：這個 demo 的處理方式
-
-降低重送影響的方法：
-
-```text
-Kafka record key = event_id
-Elasticsearch document id = key
-write.method = upsert
-```
-
-upsert 的意思是：
-
-```text
-有就更新，沒有就新增
-```
-
-這是實務上的冪等處理：用穩定 id 降低重複寫入影響。
-
-它不等於跨系統通用 exactly-once。
-
----
-layout: section
----
-
-# 回到整體架構
-
----
-
-# 為什麼這樣設計？
-
-```text
-Application
-  產生業務事件
-
-Kafka
-  接住事件流，提供 buffer 與 replay
-
-Kafka Connect
-  標準化地把 Kafka records 寫到外部系統
-
-Elasticsearch
-  提供事件搜尋與時間序列統計
-
-Kibana
-  讓人看到趨勢與問題
-```
-
-這個設計的目的，是分離不同系統責任。
-
----
-
-# 本章重點
-
-Kafka Connect 是標準化資料整合框架。
-
-回到同一條主軸：
-
-```text
-資料方向、資料格式、錯誤隔離、狀態觀察、安全重送
-```
-
-這五件事決定一條資料管線能不能長期維運。
-
----
-
-# 一句話總結
-
-```text
-折價券搶領爆量時，
-正式狀態系統不應直接承擔搜尋與觀測壓力。
-
-Kafka 先接住事件，
-Kafka Connect 負責把事件穩定送到 Elasticsearch，
-Kibana 讓團隊近即時觀察趨勢。
-```
-
-這就是這個 demo 要呈現的資料管線設計。
-
----
-
-# 附錄：可重跑與驗證
-
-Demo seed scripts 預設會清理：
-
-- connector
-- Kafka data topics
-- Kafka Connect internal topics
-- Elasticsearch index
-
-事件開始時間預設對齊執行當下：
-
-```text
-EVENT_START_TIME=<current UTC time>
-```
-
-因此每次重播都能在目前時間附近看到一致的 dashboard 結果。
-
-E2E 驗證：
-
-```bash
-just e2e
-```
+.kc-slide {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 26px 48px 24px;
+  background: #f5f8fa;
+}
+
+.kc-title {
+  margin: 0;
+  color: #21295c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.kc-subtitle {
+  margin: 4px 0 22px;
+  color: #00627d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.kc-lead {
+  margin: 0 0 18px;
+  color: #4e5f73;
+  font-size: 18px;
+}
+
+.kc-band {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  background: #00627d;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.kc-usecases {
+  margin-top: 18px;
+  border-top: 1px solid #d4dde6;
+  border-bottom: 1px solid #d4dde6;
+}
+
+.kc-concepts,
+.kc-usecases {
+  margin-top: 18px;
+  border-top: 1px solid #d4dde6;
+  border-bottom: 1px solid #d4dde6;
+}
+
+.kc-concept,
+.kc-usecase {
+  display: grid;
+  grid-template-columns: 72px 84px 250px 1fr 240px;
+  gap: 12px;
+  align-items: center;
+  min-height: 94px;
+  border-bottom: 1px solid #d4dde6;
+  background: #fff;
+  box-shadow: inset 10px 0 0 #00627d;
+  padding: 8px 10px 8px 26px;
+}
+
+.kc-concept {
+  min-height: 82px;
+}
+
+.kc-concept:last-child,
+.kc-usecase:last-child {
+  border-bottom: 0;
+}
+
+.kc-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #00627d;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.kc-tag {
+  border: 1.5px solid #247da0;
+  color: #00627d;
+  background: #eef6fa;
+  text-align: center;
+  padding: 10px 6px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kc-use-title strong {
+  display: block;
+  color: #21295c;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.kc-use-title em {
+  display: block;
+  margin-top: 8px;
+  color: #5a6878;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.kc-concept p,
+.kc-usecase p {
+  margin: 0;
+  color: #39485a;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.kc-example {
+  border: 1.5px solid #f0a52c;
+  background: #fff9ef;
+  color: #5a4a2f;
+  padding: 11px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.kc-shot-slide {
+  padding-bottom: 18px;
+}
+
+.kc-shot-wrap {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #d4dde6;
+  background: #fff;
+}
+
+.kc-shot {
+  display: block;
+  width: 100%;
+  height: 330px;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.kc-footnote {
+  margin: 9px 0 0;
+  color: #5a6878;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  font-style: italic;
+}
+</style>
