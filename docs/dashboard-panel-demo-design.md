@@ -381,6 +381,12 @@ remaining_coupons 是業務服務產生事件時寫入的觀測欄位。
 Kafka Connect 將欄位保留下來，使 Elasticsearch / Kibana 可以查詢與畫圖。
 ```
 
+資料模型刻意只保留一個對外庫存觀測欄位：`remaining_coupons`。generator 內部仍會用扣減前後的數值判斷領券成功、失敗與售罄，但 Kafka event 不再輸出 `remaining_stock`、`inventory_before`、`inventory_after`。這樣學生在事件明細裡只需要記住一個問題：
+
+```text
+這筆事件發生後，折價券還剩幾張？
+```
+
 ## 9. 失敗原因
 
 ### 要講的知識點
@@ -578,12 +584,11 @@ SMT 是 Single Message Transform。
 
 ### 有獎徵答題目
 
-正式 demo 建議只放兩題，答案必須能從 dashboard、Elasticsearch 或 connector config 直接確認。
+正式 demo 建議只放一題，答案必須能從 dashboard、Kafka topic 或 connector config 直接確認。
 
 | 題目 | 標準答案 | 驗證方式 |
 |---|---|---|
-| 「Kafka Connect - DLQ 壞資料數量」顯示 1，代表哪個 Elasticsearch index 裡有 1 筆 document？ | `product-events-dlq` | `curl -s http://localhost:9200/product-events-dlq/_count` |
-| Kafka raw record 裡的 `metadata.region`，經過 Flatten SMT 後在 Elasticsearch document 裡變成哪個欄位？ | `metadata_region` | 對照 Redpanda Console raw record 與 Kibana 事件明細 |
+| Kafka Connect 讀到 malformed JSON 這類壞資料時，會把它放到哪個錯誤隔離區？ | `DLQ` / `Dead Letter Queue` | 看「Kafka Connect - DLQ 壞資料數量」panel 與 `product.events.dlq` topic |
 
 標準收斂語：
 

@@ -25,45 +25,25 @@
 
 ## 有獎徵答
 
-這兩題安排在 `just run-demo` 跑完、手動送 malformed JSON 進 DLQ 之後。題目要有可驗證的唯一答案，避免變成開放式討論。
+這題安排在 `just run-demo` 跑完、手動送 malformed JSON 進 DLQ 之後。題目要有可驗證的唯一答案，避免變成開放式討論。
 
-### 題目 1：DLQ 數字代表哪裡的資料？
+### 題目：壞資料會被放到哪裡？
 
 題目：
 
 ```text
-Kibana 上「Kafka Connect - DLQ 壞資料數量」顯示 1，代表哪個 Elasticsearch index 裡有 1 筆 document？
+Kafka Connect 讀到 malformed JSON 這類壞資料時，會把它放到哪個錯誤隔離區？
 ```
 
 標準答案：
 
 ```text
-product-events-dlq
-```
-
-可現場驗證：
-
-```bash
-curl -s http://localhost:9200/product-events-dlq/_count
-```
-
-### 題目 2：SMT 把地區欄位改成什麼？
-
-題目：
-
-```text
-Kafka raw record 裡的 metadata.region，經過 Kafka Connect 的 Flatten SMT 後，在 Elasticsearch document 裡變成哪個欄位？
-```
-
-標準答案：
-
-```text
-metadata_region
+DLQ / Dead Letter Queue
 ```
 
 可現場驗證：
 
 ```text
-Kafka raw record: metadata.region
-Elasticsearch document: metadata_region
+Kibana panel: Kafka Connect - DLQ 壞資料數量
+Kafka topic: product.events.dlq
 ```

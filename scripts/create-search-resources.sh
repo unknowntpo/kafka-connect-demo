@@ -39,10 +39,7 @@ if ensure_absent_or_skip "product-events"; then
           "metadata_region": { "type": "keyword" },
           "metadata_campaign": { "type": "keyword" },
           "metadata_ai_profile_version": { "type": "keyword" },
-          "remaining_stock": { "type": "integer" },
           "remaining_coupons": { "type": "integer" },
-          "inventory_before": { "type": "integer" },
-          "inventory_after": { "type": "integer" },
           "discount_percent": { "type": "integer" },
           "price": { "type": "double" },
           "message": { "type": "text" }

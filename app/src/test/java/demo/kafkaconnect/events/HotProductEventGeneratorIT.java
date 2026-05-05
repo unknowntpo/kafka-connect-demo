@@ -87,8 +87,10 @@ class HotProductEventGeneratorIT {
             assertNotNull(evt.path("event_type").asText());
             assertNotNull(evt.path("phase").asText());
             assertTrue(evt.has("occurred_at"));
-            assertTrue(evt.has("inventory_before"));
-            assertTrue(evt.has("inventory_after"));
+            assertTrue(evt.has("remaining_coupons"));
+            assertFalse(evt.has("remaining_stock"));
+            assertFalse(evt.has("inventory_before"));
+            assertFalse(evt.has("inventory_after"));
             assertEquals("flash-sale-coupon", evt.path("scenario").asText());
             assertEquals("test-campaign", evt.path("metadata").path("campaign").asText());
         }
@@ -106,7 +108,7 @@ class HotProductEventGeneratorIT {
         int successCount = 0;
         for (ProducerRecord<String, String> rec : producer.history()) {
             JsonNode evt = MAPPER.readTree(rec.value());
-            int after = evt.path("inventory_after").asInt();
+            int after = evt.path("remaining_coupons").asInt();
             assertTrue(after >= 0, "inventory must never go negative");
             assertTrue(after <= prevInventory, "inventory must be monotonically non-increasing");
             prevInventory = after;

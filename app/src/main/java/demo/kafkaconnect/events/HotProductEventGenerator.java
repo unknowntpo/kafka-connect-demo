@@ -128,10 +128,7 @@ public final class HotProductEventGenerator {
         event.put("service", profileServiceFor(eventType));
         event.put("severity", profileSeverityFor(eventType, inventoryAfter));
         event.put("trace_id", "trace_" + Integer.toHexString(random.nextInt()));
-        event.put("remaining_stock", inventoryAfter);
         event.put("remaining_coupons", inventoryAfter);
-        event.put("inventory_before", inventoryBefore);
-        event.put("inventory_after", inventoryAfter);
         event.put("message", profileMessageFor(eventType, phase.path("name").asText("unknown"), inventoryAfter));
 
         if (isSuccessEvent(eventType)) {

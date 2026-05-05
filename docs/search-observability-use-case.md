@@ -192,80 +192,71 @@ COUPON_CLAIM_SUCCEEDED
 COUPON_CLAIM_FAILED
 ```
 
-共同欄位範例：
+折價券觀測事件範例：
 
 ```json
 {
   "event_id": "evt_...",
-  "event_type": "PRODUCT_VIEWED",
-  "product_id": "sku_hot_001",
-  "product_name": "Limited Edition Keyboard",
+  "event_type": "PAGE_REFRESHED",
+  "product_id": "sku_coupon_001",
+  "product_name": "May Day Limited Coupon",
+  "coupon_id": "coupon_mayday_001",
+  "coupon_name": "May Day 30% Off Coupon",
   "user_id": "user_0042",
   "session_id": "sess_abcd",
   "occurred_at": "<run_started_at + 15s>",
   "service": "web",
   "severity": "INFO",
-  "remaining_stock": 42,
-  "message": "Hot product page viewed",
+  "remaining_coupons": 42,
+  "message": "User repeatedly refreshed during drop-open",
   "metadata": {
     "region": "ap-northeast-1",
-    "campaign": "creator-drop"
+    "campaign": "may-day-coupon-drop"
   }
 }
 ```
 
-購買成功會增加：
+領券成功會增加：
 
 ```json
 {
-  "order_id": "order_9001",
-  "price": 129.99
+  "coupon_claim_id": "claim_101234",
+  "discount_percent": 30
 }
 ```
 
-購買失敗會增加：
+領券失敗會增加：
 
 ```json
 {
-  "failure_reason": "OUT_OF_STOCK"
-}
-```
-
-折價券情境會增加：
-
-```json
-{
-  "coupon_id": "coupon_mayday_001",
-  "remaining_coupons": 0,
   "failure_reason": "COUPON_SOLD_OUT"
 }
 ```
 
+`remaining_coupons` 是這個 demo 對外保留的庫存觀測欄位。generator 內部仍會用扣減前後的數值判斷成功、失敗與售罄，但 event 只輸出 dashboard 需要的「處理後剩餘張數」，避免在教學資料裡同時出現多個語意接近的庫存欄位。
+
 ## 事件產生器
 
-熱門商品 generator 是 stateful 的簡化模型：
+限量折價券 generator 是 stateful 的簡化模型：
 
 ```text
-remaining_stock = initial_stock
+remaining_coupons = initial_coupons
 
-warmup:
-  mostly PRODUCT_VIEWED
-  some BUY_CLICKED
+teaser / waiting-room:
+  mostly COUPON_VIEWED, PAGE_REFRESHED, WAITING_ROOM_JOINED
 
-hot:
-  more BUY_CLICKED
-  more PURCHASE_SUCCEEDED
-  stock decreases
+drop-open:
+  COUPON_CLAIM_SUCCEEDED decreases remaining_coupons
 
 sold_out:
-  PURCHASE_SUCCEEDED stops
-  PURCHASE_FAILED with OUT_OF_STOCK increases
+  COUPON_CLAIM_SUCCEEDED stops
+  COUPON_CLAIM_FAILED with COUPON_SOLD_OUT increases
 ```
 
 CLI 範例：
 
 ```bash
-just run-basic
+just run-demo
 ```
 
 如果本機 Kibana 或 Elasticsearch 回傳 HTTP 429，通常代表本機資源或 Docker disk 壓力過高。正式展示建議先執行：
