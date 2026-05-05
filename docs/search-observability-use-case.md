@@ -135,6 +135,7 @@ Dashboard 應該呈現下列趨勢：
 已實作的 Kibana panels：
 
 - Metric：已索引事件總數。
+- Metric：DLQ 壞資料數量，觀察資料管線是否有 record 被隔離。
 - Line chart：依 `event_type` 切分的事件量趨勢。
 - Table：熱門商品行為統計，列出五種事件類型的事件數；總計應與事件總數一致。
 - Table：`failure_reason`，用來觀察售罄或限流。
@@ -307,7 +308,7 @@ E2E 測試使用 seeded runs；live demo 可以改用 unseeded runs。
 - `Task`：sink task 從 Kafka partitions 消費資料。
 - `Converter`：`JsonConverter` 把 Kafka bytes 轉成 `ConnectRecord`。
 - `SMT`：`Flatten` 將 `metadata.region` 展平成 `metadata_region`；`InsertField` 加上 `pipeline=connect-search-demo`。
-- `DLQ`：malformed JSON records 會被送到 `product.events.dlq`。
+- `DLQ`：malformed JSON records 會被送到 `product.events.dlq`，再由另一條 sink pipeline 寫入 `product-events-dlq` 供 Kibana 查詢。
 
 Sink-side flow：
 

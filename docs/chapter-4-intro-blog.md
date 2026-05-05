@@ -336,6 +336,7 @@ http://localhost:5601/app/dashboards
 | 事件總數 | 確認事件已進入查詢系統 |
 | 事件類型 | 看瀏覽、重新整理、成功、失敗如何隨時間變化 |
 | 熱門商品行為統計 | 看瀏覽、重新整理、排隊、成功、失敗的事件數 |
+| DLQ 壞資料數量 | 看資料管線是否有 record 被隔離 |
 | 失敗原因 | 看售罄或限流是否集中 |
 | 高頻操作線索 | 觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者 |
 | 地區流量 | 比較不同地區的壓力分布 |
@@ -567,7 +568,7 @@ errors.tolerance=all
 errors.deadletterqueue.topic.name=product.events.dlq
 ```
 
-此 demo 驗證的是解析或轉換階段的壞資料會進入 DLQ。
+此 demo 驗證的是解析或轉換階段的壞資料會進入 DLQ。為了讓 Kibana 也能看到 DLQ 狀態，demo 另外建立一條 sink pipeline，將 `product.events.dlq` 寫到 `product-events-dlq` index。
 
 DLQ 代表問題資料被隔離。後續仍要處理外部系統故障、寫入 Elasticsearch 時欄位型別不相容、下游長時間變慢，以及監控、告警與補償流程。
 

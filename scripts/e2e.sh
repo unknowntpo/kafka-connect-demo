@@ -14,18 +14,26 @@ assert_eq() {
 }
 
 wait_for_index_count() {
+  local index="$1"
   local expected="$1"
+  if [[ $# -eq 2 ]]; then
+    index="$1"
+    expected="$2"
+  else
+    index="product-events"
+    expected="$1"
+  fi
   local attempt
   for attempt in $(seq 1 60); do
     local actual
-    actual="$(curl -fsS http://localhost:9200/product-events/_count 2>/dev/null | jq -r '.count // empty' || true)"
+    actual="$(curl -fsS "http://localhost:9200/$index/_count" 2>/dev/null | jq -r '.count // empty' || true)"
     actual="${actual//$'\r'/}"
     if [[ "$actual" =~ ^[0-9]+$ ]] && (( actual >= expected )); then
       return 0
     fi
     sleep 2
   done
-  echo "Timed out waiting for at least $expected indexed documents" >&2
+  echo "Timed out waiting for at least $expected indexed documents in $index" >&2
   return 1
 }
 
@@ -56,6 +64,15 @@ assert_topic_contains() {
   fi
 }
 
+produce_malformed_record() {
+  printf 'evt_bad_json_e2e_001\t{"event_id":"evt_bad_json_e2e_001","event_type":"COUPON_VIEWED"\n' \
+    | docker compose exec -T broker kafka-console-producer \
+      --bootstrap-server broker:29092 \
+      --topic product.events \
+      --property parse.key=true \
+      --property key.separator=$'\t' >/dev/null
+}
+
 cd "$ROOT_DIR"
 
 "$ROOT_DIR/scripts/reset.sh"
@@ -72,10 +89,12 @@ fi
 "$ROOT_DIR/scripts/create-search-resources.sh"
 "$ROOT_DIR/scripts/register-connectors.sh"
 wait_for_connector_running elasticsearch-sink-product-events
+wait_for_connector_running elasticsearch-sink-product-events-dlq
 
 GRADLE_DOCKER_NETWORK=kafka-connect-demo_default KAFKA_BOOTSTRAP_SERVERS=broker:29092 \
-  "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=80 --duration-seconds=5 --initial-stock=40 --seed=42 --malformed-ratio=0.02"
+  "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=80 --duration-seconds=5 --initial-stock=40 --seed=42 --malformed-ratio=0"
 wait_for_index_count 100
+produce_malformed_record
 
 indexed_count="$(curl -fsS http://localhost:9200/product-events/_count | jq -r '.count')"
 if (( indexed_count < 100 )); then
@@ -108,10 +127,18 @@ if (( dlq_offsets < 1 )); then
   echo "Expected malformed records to be written to product.events.dlq" >&2
   exit 1
 fi
+wait_for_index_count product-events-dlq 1
+
+dlq_docs="$(curl -fsS "http://localhost:9200/product-events-dlq/_search" -H "Content-Type: application/json" -d '{"size":0,"query":{"term":{"pipeline":"connect-search-demo-dlq"}}}' | jq -r '.hits.total.value')"
+if (( dlq_docs < 1 )); then
+  echo "Expected DLQ records to be indexed into product-events-dlq" >&2
+  exit 1
+fi
 
 docker compose restart connect >/dev/null
 "$ROOT_DIR/scripts/wait-for-connect.sh"
 wait_for_connector_running elasticsearch-sink-product-events
+wait_for_connector_running elasticsearch-sink-product-events-dlq
 
 GRADLE_DOCKER_NETWORK=kafka-connect-demo_default KAFKA_BOOTSTRAP_SERVERS=broker:29092 \
   "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --rate-per-second=20 --duration-seconds=2 --initial-stock=10 --seed=99 --malformed-ratio=0"

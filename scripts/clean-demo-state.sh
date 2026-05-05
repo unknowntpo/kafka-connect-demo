@@ -2,10 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONNECTOR_NAME="${CONNECTOR_NAME:-elasticsearch-sink-product-events}"
+CONNECTOR_NAMES=(
+  "elasticsearch-sink-product-events"
+  "elasticsearch-sink-product-events-dlq"
+)
 TOPICS=(
   "product.events"
   "product.events.dlq"
+  "product.events.dlq.indexer.dlq"
   "connect-configs-hot-product-demo"
   "connect-offsets-hot-product-demo"
   "connect-status-hot-product-demo"
@@ -68,7 +72,9 @@ wait_for_broker
 wait_for_elasticsearch
 clear_elasticsearch_readonly_blocks
 
-curl -fsS -X DELETE "http://localhost:8083/connectors/$CONNECTOR_NAME" >/dev/null 2>&1 || true
+for connector_name in "${CONNECTOR_NAMES[@]}"; do
+  curl -fsS -X DELETE "http://localhost:8083/connectors/$connector_name" >/dev/null 2>&1 || true
+done
 docker compose stop connect >/dev/null 2>&1 || true
 
 for topic in "${TOPICS[@]}"; do
@@ -84,8 +90,9 @@ for topic in "${TOPICS[@]}"; do
 done
 
 curl -fsS -X DELETE "http://localhost:9200/product-events" >/dev/null 2>&1 || true
+curl -fsS -X DELETE "http://localhost:9200/product-events-dlq" >/dev/null 2>&1 || true
 
 docker compose up -d connect kibana redpanda-console >/dev/null
 "$ROOT_DIR/scripts/wait-for-connect.sh"
 
-echo "Demo state cleaned: connector, Kafka topics, Connect internal topics, and Elasticsearch index removed."
+echo "Demo state cleaned: connectors, Kafka topics, Connect internal topics, and Elasticsearch indexes removed."

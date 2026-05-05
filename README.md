@@ -16,6 +16,15 @@ Elasticsearch index: product-events
         |
         v
 Kibana dashboard / search UI
+
+Kafka topic: product.events.dlq
+        |
+        | Kafka Connect Elasticsearch Sink
+        v
+Elasticsearch index: product-events-dlq
+        |
+        v
+Kibana DLQ health panel
 ```
 
 故事刻意設計得容易理解：許多使用者瀏覽商品、點擊購買或搶折價券；部分操作成功，庫存逐漸下降；售罄後失敗事件上升。學生可以直接在 Kibana 上看到資料流動與事件趨勢。
@@ -64,8 +73,9 @@ Kibana dashboard 定義放在 [dashboards/hot-product-sales-observability.ndjson
 
 這個檔案是 Kibana Saved Objects NDJSON，包含：
 
-- data view：`product-events`
-- 6 個 visualization panels
+- data views：`product-events`、`product-events-dlq`
+- 9 個 visualization panels
+- 1 個 Elasticsearch 文件明細 search panel
 - dashboard layout 與 references
 
 建立或覆蓋 dashboard：
@@ -219,6 +229,7 @@ http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard
 - 已索引事件總數
 - 依 `event_type` 切分的事件量趨勢
 - 熱門商品行為統計：五種事件類型的事件數，總計應與事件總數一致。
+- DLQ 壞資料數量：正常為 0；手動送 malformed JSON 後會增加。
 - failure reasons，特別是 `OUT_OF_STOCK` 或 `COUPON_SOLD_OUT`
 - 高頻操作線索，用來觀察短時間內反覆重新整理或多次領券失敗是否集中於少數使用者；這是排查線索，不代表 bot 偵測。
 - 透過 `Flatten` SMT 產生的 `metadata_region`，展示不同地區的流量分布
@@ -243,6 +254,7 @@ E2E 會驗證：
 - SMT 欄位 `pipeline=connect-search-demo`
 - SMT 展平後的 `metadata_region`
 - malformed records 被送到 `product.events.dlq`
+- DLQ records 被另一條 sink pipeline 寫到 `product-events-dlq`
 - Connect restart 後仍可繼續 indexing
 - Kafka Connect internal topics 已建立
 

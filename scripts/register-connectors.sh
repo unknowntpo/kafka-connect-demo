@@ -2,7 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONNECTOR_CONFIG="${1:-$ROOT_DIR/connectors/elasticsearch-sink-product-events.json}"
+CONNECTOR_CONFIGS=("$@")
+
+if [[ ${#CONNECTOR_CONFIGS[@]} -eq 0 ]]; then
+  CONNECTOR_CONFIGS=(
+    "$ROOT_DIR/connectors/elasticsearch-sink-product-events.json"
+    "$ROOT_DIR/connectors/elasticsearch-sink-product-events-dlq.json"
+  )
+fi
 
 put_connector() {
   local file="$1"
@@ -16,4 +23,6 @@ put_connector() {
     "http://localhost:8083/connectors/$name/config" | jq .
 }
 
-put_connector "$CONNECTOR_CONFIG"
+for connector_config in "${CONNECTOR_CONFIGS[@]}"; do
+  put_connector "$connector_config"
+done
