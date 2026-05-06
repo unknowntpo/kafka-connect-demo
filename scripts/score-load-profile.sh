@@ -6,10 +6,10 @@ SCENARIO="${SCENARIO:-flash-sale-coupon}"
 WINDOW_FROM="${WINDOW_FROM:-now-3h}"
 WINDOW_TO="${WINDOW_TO:-now}"
 FIRST_FROM="${FIRST_FROM:-now-3h}"
-FIRST_TO="${FIRST_TO:-now-60m}"
-MIDDLE_FROM="${MIDDLE_FROM:-now-60m}"
-MIDDLE_TO="${MIDDLE_TO:-now-30m}"
-LAST_FROM="${LAST_FROM:-now-30m}"
+FIRST_TO="${FIRST_TO:-now-2h}"
+MIDDLE_FROM="${MIDDLE_FROM:-now-2h}"
+MIDDLE_TO="${MIDDLE_TO:-now-1h}"
+LAST_FROM="${LAST_FROM:-now-1h}"
 LAST_TO="${LAST_TO:-now}"
 
 query_file="$(mktemp)"
@@ -48,9 +48,9 @@ cat >"$query_file" <<JSON
       "date_range": {
         "field": "occurred_at",
         "ranges": [
-          { "key": "first_30m", "from": "$FIRST_FROM", "to": "$FIRST_TO" },
-          { "key": "middle_30m", "from": "$MIDDLE_FROM", "to": "$MIDDLE_TO" },
-          { "key": "last_30m", "from": "$LAST_FROM", "to": "$LAST_TO" }
+          { "key": "first_window", "from": "$FIRST_FROM", "to": "$FIRST_TO" },
+          { "key": "middle_window", "from": "$MIDDLE_FROM", "to": "$MIDDLE_TO" },
+          { "key": "last_window", "from": "$LAST_FROM", "to": "$LAST_TO" }
         ]
       }
     }
@@ -79,8 +79,8 @@ jq --arg scenario "$SCENARIO" '
   | bucket_count("COUPON_CLAIM_FAILED") as $failures
   | (.aggregations.coupon_viewed_users.users.buckets | length) as $view_users
   | reason_count("COUPON_SOLD_OUT") as $sold_out
-  | range_count("first_30m") as $first
-  | range_count("last_30m") as $last
+  | range_count("first_window") as $first
+  | range_count("last_window") as $last
   | (.aggregations.all_users.buckets | length) as $unique_users
   | ((.aggregations.top_users.buckets[0].doc_count // 0) / (if $total == 0 then 1 else $total end)) as $top_user_share
   | (.aggregations.min_inventory.value // 999999) as $min_inventory
@@ -98,8 +98,8 @@ jq --arg scenario "$SCENARIO" '
       ),
       scenario: $scenario,
       total_events: $total,
-      first_30m_events: $first,
-      last_30m_events: $last,
+      first_window_events: $first,
+      last_window_events: $last,
       surge_ratio: (($last / (if $first == 0 then 1 else $first end)) * 100 | round / 100),
       event_types: {
         page_refreshed: $refreshes,

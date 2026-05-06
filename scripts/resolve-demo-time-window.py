@@ -39,17 +39,19 @@ def main() -> int:
         event_start = parse_instant(event_start_time)
         event_end = event_start + timedelta(seconds=duration_seconds)
     else:
-        event_end = datetime.now(timezone.utc).replace(microsecond=0)
-        event_start = event_end - timedelta(seconds=duration_seconds)
+        event_start = datetime.now(timezone.utc).replace(microsecond=0)
+        event_end = event_start + timedelta(seconds=duration_seconds)
 
-    default_dashboard_from = event_end - timedelta(hours=3)
+    default_dashboard_from = event_start
     default_dashboard_to = event_end
-    default_first_from = default_dashboard_from
-    default_first_to = event_start + timedelta(minutes=20)
+    first_cut = event_start + timedelta(seconds=duration_seconds / 3)
+    second_cut = event_start + timedelta(seconds=(duration_seconds * 2) / 3)
+    default_first_from = event_start
+    default_first_to = first_cut
     default_middle_from = default_first_to
-    default_middle_to = event_start + timedelta(minutes=50)
+    default_middle_to = second_cut
     default_last_from = default_middle_to
-    default_last_to = default_dashboard_to
+    default_last_to = event_end
 
     values = {
         "EVENT_START_TIME": format_instant(event_start),

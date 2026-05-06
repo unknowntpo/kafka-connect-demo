@@ -4,7 +4,7 @@
   "campaign": "may-day-coupon-drop",
   "total_events": 24000,
   "participant_users": 12000,
-  "duration_seconds": 4800,
+  "duration_seconds": 30,
   "inventory": 1200,
   "time_skew_power": 2.8,
   "failure_event": "COUPON_CLAIM_FAILED",

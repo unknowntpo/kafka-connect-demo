@@ -366,10 +366,10 @@ cleanup 會移除：
 
 這樣重跑 demo 時，不會混入前一次執行留下的 connector offsets、topic contents 或 indexed documents。
 
-seed scripts 預設會讓事件結束於執行當下：
+seed scripts 預設會讓事件從執行當下開始，並在 30 秒後結束：
 
 ```text
 BASE_TIME=<current UTC time>
 ```
 
-Kibana dashboard time range 會在 seeding 時設定為 demo 結束時間往前 3 小時到 demo 結束時間，因此 demo 資料會完整落在目前時間之前。事件內容、比例與波形仍由固定 seed 與 profile 控制；需要完全固定時間時，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。
+Kibana dashboard time range 會在 seeding 時設定為 demo 開始時間到 demo 開始後 30 秒，因此 demo 資料會集中在很短的活動時間窗。`run-demo` 使用 realtime pacing，讓事件依 `occurred_at` 節奏逐步送入 Kafka，現場更容易看到 dashboard 隨 refresh 更新。事件內容、比例與波形仍由固定 seed 與 profile 控制；需要完全固定時間時，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。

@@ -1,10 +1,10 @@
 # Kafka Connect Demo 講者備忘
 
-這份文件是講者備忘，不放進 Slidev 投影片。
+這份文件是講者備忘，不放進 blog 或 dashboard 正文。
 
 ## Demo 模式
 
-- 投影片中的 demo 是 deterministic replay，不是逐秒播放的 realtime animation。
+- Demo 是 deterministic profile replay；`run-demo` 會使用 realtime pacing，讓 30 秒事件窗逐步寫入 Kafka。
 - 現場展示建議使用 `just run-demo`，避免逐步指令漏掉清理步驟。
 - 如果聽眾問「為什麼不是即時流」，可以說明：Kafka Connect 持續消費 Kafka topic；本 demo 為了課堂可重複性，使用固定 seed 重播同一段流量，事件開始時間則對齊執行當下。
 
@@ -17,9 +17,9 @@
 
 ## 現場檢查順序
 
-1. 確認 Slidev：`just slides`
-2. 確認 Docker 空間：`docker system df`
-3. 重播 demo：`just run-demo`
+1. 確認 Google Slides：`Kafka Connect Ch4`。
+2. 確認 Docker 空間：`docker system df`。
+3. 重播 demo：`just run-demo`。
 4. 若 Kibana saved object 回 429，檢查 Elasticsearch flood-stage watermark，必要時清理 Docker disk 並解除 read-only block。
 5. 若需要完整驗證，執行 `just e2e`。
 

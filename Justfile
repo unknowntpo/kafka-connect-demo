@@ -3,15 +3,6 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 default:
     just --list
 
-install:
-    npm install
-
-slides:
-    npm run slides
-
-slides-build:
-    npm run slides:build
-
 start:
     ./scripts/start.sh
 

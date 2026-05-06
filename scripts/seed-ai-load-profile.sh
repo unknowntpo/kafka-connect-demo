@@ -18,8 +18,6 @@ fi
 
 expected_events="$(jq -r '.total_events' "$PROFILE")"
 duration_seconds="$(jq -r '.duration_seconds' "$PROFILE")"
-eval "$(DEMO_DURATION_SECONDS="$duration_seconds" "$ROOT_DIR/scripts/resolve-demo-time-window.py")"
-DASHBOARD_URL="http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard?_g=(filters:!(),refreshInterval:(pause:!f,value:5000),time:(from:'$DASHBOARD_TIME_FROM',to:'$DASHBOARD_TIME_TO'))"
 
 if [[ "$RESET_STATE" == "1" ]]; then
   "$ROOT_DIR/scripts/clean-demo-state.sh"
@@ -28,14 +26,18 @@ fi
 "$ROOT_DIR/scripts/create-topics.sh"
 "$ROOT_DIR/scripts/create-search-resources.sh"
 "$ROOT_DIR/scripts/register-connectors.sh"
+
+eval "$(DEMO_DURATION_SECONDS="$duration_seconds" "$ROOT_DIR/scripts/resolve-demo-time-window.py")"
+DASHBOARD_URL="http://localhost:5601/app/dashboards#/view/hot-product-sales-dashboard?_g=(filters:!(),refreshInterval:(pause:!f,value:5000),time:(from:'$DASHBOARD_TIME_FROM',to:'$DASHBOARD_TIME_TO'))"
 DASHBOARD_TIME_FROM="$DASHBOARD_TIME_FROM" DASHBOARD_TIME_TO="$DASHBOARD_TIME_TO" "$ROOT_DIR/scripts/create-kibana-dashboard.sh"
 
 echo "Generating $expected_events events from AI load profile: $PROFILE"
 echo "Using event start time: $EVENT_START_TIME"
 echo "Using profile end time: $BASE_TIME"
+echo "Realtime pacing: events are sent according to their occurred_at timestamps."
 
 GRADLE_DOCKER_NETWORK="$GRADLE_DOCKER_NETWORK" KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
-  "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --profile=/workspace/$PROFILE --seed=$SEED --base-time=$BASE_TIME --malformed-ratio=$MALFORMED_RATIO"
+  "$ROOT_DIR/scripts/run-gradle.sh" --no-daemon run --args="generate --profile=/workspace/$PROFILE --seed=$SEED --base-time=$BASE_TIME --malformed-ratio=$MALFORMED_RATIO --realtime"
 
 for attempt in $(seq 1 90); do
   count="$(curl -fsS 'http://localhost:9200/product-events/_count' 2>/dev/null | jq -r '.count // 0' || true)"

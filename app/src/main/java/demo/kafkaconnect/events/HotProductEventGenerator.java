@@ -84,13 +84,24 @@ public final class HotProductEventGenerator {
                 remainingInventory = Math.max(0, remainingInventory - 1);
             }
 
+            long scheduledMillis = profileEventTimeMillis(baseMillis, durationMillis, progress, timeSkewPower);
             Map<String, Object> event = buildProfileEvent(profile, phase, eventType, userId, i, beforeInventory, remainingInventory, baseMillis, durationMillis, progress, timeSkewPower, random);
             String eventId = (String) event.get("event_id");
+            if (config.sleepBetweenEvents) {
+                sleepUntil(scheduledMillis);
+            }
             producer.send(new ProducerRecord<String, String>(config.topic, eventId, MAPPER.writeValueAsString(event)));
 
             if (config.malformedRatio > 0 && random.nextDouble() < config.malformedRatio) {
                 producer.send(new ProducerRecord<String, String>(config.topic, "bad_profile_" + i, "{\"event_id\":\"bad_profile_" + i + "\","));
             }
+        }
+    }
+
+    private static void sleepUntil(long targetMillis) throws InterruptedException {
+        long remainingMillis = targetMillis - System.currentTimeMillis();
+        if (remainingMillis > 0) {
+            Thread.sleep(remainingMillis);
         }
     }
 

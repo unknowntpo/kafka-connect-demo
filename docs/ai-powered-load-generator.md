@@ -46,7 +46,7 @@ profiles/flash-sale-coupon.json
 
 - `total_events`：目標事件數。
 - `participant_users`：參與活動的使用者數；每個 participant 會先產生一筆 `COUPON_VIEWED`。
-- `duration_seconds`：要產生的歷史時間窗。
+- `duration_seconds`：要產生的事件時間跨度。內建 demo profile 目前是 30 秒。
 - `inventory`：限量折價券數量。
 - `time_skew_power`：控制事件是否集中在時間窗後段。
 - `phases`：行為階段，例如 teaser、waiting room、drop open、sold-out pressure。
@@ -78,7 +78,7 @@ feedback loop 透過 Elasticsearch queries 實作：
 scorer 會檢查：
 
 - 總事件量是否足以支撐 dashboard 趨勢。
-- 後 30 分鐘流量是否明顯高於前 30 分鐘。
+- 最後一段流量是否明顯高於第一段。
 - refresh 與 waiting-room events 是否存在。
 - coupon claims 是否在 inventory 歸零前成功。
 - inventory 歸零後，sold-out failures 是否成為主要失敗原因。
@@ -100,13 +100,13 @@ cleanup 會移除：
 - Kafka Connect internal topics
 - Elasticsearch index
 
-內建 flash-sale profile 預設讓事件結束於執行當下：
+內建 flash-sale profile 預設讓事件從執行當下開始，並在 30 秒後結束：
 
 ```text
 BASE_TIME=<current UTC time>
 ```
 
-因此重跑時資料會完整落在目前時間之前，打開 dashboard 的 `now-3h` 到 `now` 時間窗就能看到整段事件。事件內容、比例與波形仍由固定 seed 與 profile 控制；若需要完全固定時間，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。
+因此重跑時資料會落在一段很短的 demo 時間窗內。seed 腳本會把 dashboard time range 對齊這段 30 秒事件時間窗，並在 profile generator 加上 realtime pacing，讓事件依 `occurred_at` 節奏送入 Kafka。事件內容、比例與波形仍由固定 seed 與 profile 控制；若需要完全固定時間，可以手動指定 `BASE_TIME` 或 `EVENT_START_TIME`。
 
 ## 擴充方式
 
